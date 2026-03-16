@@ -1,0 +1,144 @@
+.persistent-audio-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: var(--background-secondary);
+  border-top: 1px solid var(--background-modifier-border);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 8px;
+  z-index: 100;
+  font-size: var(--font-smallest);
+  color: var(--text-normal);
+}
+
+.persistent-audio-bar.hidden {
+  display: none;
+}
+
+.persistent-audio-bar button {
+  background: none;
+  border: none;
+  color: var(--text-normal);
+  cursor: pointer;
+  padding: 4px;
+  font-size: 16px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.persistent-audio-bar button svg {
+  display: block;
+}
+
+.persistent-audio-bar button:hover {
+  color: var(--text-accent);
+}
+
+.persistent-audio-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.persistent-audio-title:hover {
+  color: var(--text-accent);
+}
+
+.persistent-audio-progress {
+  flex: 2;
+  accent-color: var(--interactive-accent);
+  cursor: pointer;
+}
+
+.persistent-audio-time {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.persistent-audio-play-btn {
+  cursor: pointer;
+  color: var(--text-accent);
+  margin-left: 4px;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+
+.persistent-audio-play-btn:hover {
+  color: var(--interactive-accent-hover);
+}
+
+.persistent-audio-frontmatter-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  color: var(--text-accent);
+  font-size: var(--font-small);
+  margin-bottom: 8px;
+}
+
+.persistent-audio-frontmatter-bar:hover {
+  color: var(--interactive-accent-hover);
+}
+
+.persistent-audio-speed {
+  font-size: var(--font-smallest);
+  min-width: 36px;
+  text-align: center;
+}
+
+/* Drag handle — hidden on desktop, visible on mobile */
+.persistent-audio-drag-handle {
+  display: none;
+}
+
+/* On mobile, float above Obsidian's bottom nav and allow dragging */
+.is-mobile .persistent-audio-bar {
+  bottom: 48px;
+  left: 8px;
+  right: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--background-modifier-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.is-mobile .persistent-audio-bar.dragging {
+  opacity: 0.85;
+  transition: none;
+}
+
+.is-mobile .persistent-audio-drag-handle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  touch-action: none;
+  cursor: grab;
+  padding: 4px 6px;
+  margin-right: 2px;
+  user-select: none;
+}
+
+.persistent-audio-grip-line {
+  display: block;
+  width: 16px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--text-faint);
+}
+
+.is-mobile .persistent-audio-drag-handle:active .persistent-audio-grip-line {
+  background: var(--text-accent);
+}
