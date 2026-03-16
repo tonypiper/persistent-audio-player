@@ -1,1 +1,9 @@
-{"id":"persistent-audio-player","name":"Persistent Audio Player","version":"1.0.2","minAppVersion":"1.0.0","description":"Audio player that keeps playing when you scroll or switch notes","author":"Tony Piper","isDesktopOnly":false}
+{
+	"id": "persistent-audio-player",
+	"name": "Persistent Audio Player",
+	"version": "1.0.3",
+	"minAppVersion": "1.0.0",
+	"description": "Audio player that keeps playing when you scroll or switch notes",
+	"author": "Tony Piper",
+	"isDesktopOnly": false
+}
