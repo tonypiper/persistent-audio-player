@@ -27,10 +27,11 @@ function svgEl(parent: SVGSVGElement, tag: string, attrs: Record<string, string>
   parent.appendChild(el);
 }
 
-function makeSkipBackIcon(): SVGSVGElement {
+function makeSkipIcon(direction: "back" | "fwd"): SVGSVGElement {
+  const isBack = direction === "back";
   return createSvg((svg) => {
-    svgEl(svg, "path", { d: "M1 4v6h6" });
-    svgEl(svg, "path", { d: "M3.51 15a9 9 0 1 0 2.13-9.36L1 10" });
+    svgEl(svg, "path", { d: isBack ? "M1 4v6h6" : "M23 4v6h-6" });
+    svgEl(svg, "path", { d: isBack ? "M3.51 15a9 9 0 1 0 2.13-9.36L1 10" : "M20.49 15a9 9 0 1 1-2.13-9.36L23 10" });
     svgEl(svg, "text", { x: "12", y: "15.5", "text-anchor": "middle", stroke: "none", fill: "currentColor", "font-size": "8", "font-weight": "bold" });
     svg.lastElementChild!.textContent = "15";
   });
@@ -46,15 +47,6 @@ function makePauseIcon(): SVGSVGElement {
   return createSvg((svg) => {
     svgEl(svg, "rect", { x: "5", y: "3", width: "4", height: "18", fill: "currentColor", stroke: "none", rx: "1" });
     svgEl(svg, "rect", { x: "15", y: "3", width: "4", height: "18", fill: "currentColor", stroke: "none", rx: "1" });
-  });
-}
-
-function makeSkipFwdIcon(): SVGSVGElement {
-  return createSvg((svg) => {
-    svgEl(svg, "path", { d: "M23 4v6h-6" });
-    svgEl(svg, "path", { d: "M20.49 15a9 9 0 1 1-2.13-9.36L23 10" });
-    svgEl(svg, "text", { x: "12", y: "15.5", "text-anchor": "middle", stroke: "none", fill: "currentColor", "font-size": "8", "font-weight": "bold" });
-    svg.lastElementChild!.textContent = "15";
   });
 }
 
@@ -76,6 +68,8 @@ export class PlayerView {
   private timeEl: HTMLElement;
   private audio: HTMLAudioElement;
   private app: App;
+  private playIcon: SVGSVGElement;
+  private pauseIcon: SVGSVGElement;
   private seeking = false;
   private speedIndex = 0;
   private onTitleClick: (() => void) | null = null;
@@ -86,9 +80,15 @@ export class PlayerView {
   private dragStartY = 0;
   private dragStartBottom = 0;
 
+  // Bound document listeners for cleanup
+  private onDocTouchMove: (e: TouchEvent) => void;
+  private onDocTouchEnd: () => void;
+
   constructor(audio: HTMLAudioElement, app: App) {
     this.audio = audio;
     this.app = app;
+    this.playIcon = makePlayIcon();
+    this.pauseIcon = makePauseIcon();
 
     this.containerEl = document.createElement("div");
     this.containerEl.addClass("persistent-audio-bar", "hidden");
@@ -112,14 +112,14 @@ export class PlayerView {
     this.setupDrag(dragHandle);
 
     const skipBackBtn = this.containerEl.createEl("button");
-    skipBackBtn.appendChild(makeSkipBackIcon());
+    skipBackBtn.appendChild(makeSkipIcon("back"));
     skipBackBtn.setAttribute("aria-label", "Skip back 15s");
     skipBackBtn.addEventListener("click", () => {
       this.audio.currentTime = Math.max(this.audio.currentTime - 15, 0);
     });
 
     this.playPauseBtn = this.containerEl.createEl("button");
-    this.playPauseBtn.appendChild(makePlayIcon());
+    this.playPauseBtn.appendChild(this.playIcon);
     this.playPauseBtn.setAttribute("aria-label", "Play/pause");
     this.playPauseBtn.addEventListener("click", () => {
       if (this.audio.paused) {
@@ -130,7 +130,7 @@ export class PlayerView {
     });
 
     const skipFwdBtn = this.containerEl.createEl("button");
-    skipFwdBtn.appendChild(makeSkipFwdIcon());
+    skipFwdBtn.appendChild(makeSkipIcon("fwd"));
     skipFwdBtn.setAttribute("aria-label", "Skip forward 15s");
     skipFwdBtn.addEventListener("click", () => {
       this.audio.currentTime = Math.min(
@@ -205,8 +205,11 @@ export class PlayerView {
   }
 
   updatePlayState(playing: boolean): void {
-    this.playPauseBtn.empty();
-    this.playPauseBtn.appendChild(playing ? makePauseIcon() : makePlayIcon());
+    const current = playing ? this.pauseIcon : this.playIcon;
+    if (this.playPauseBtn.firstChild !== current) {
+      this.playPauseBtn.empty();
+      this.playPauseBtn.appendChild(current);
+    }
   }
 
   updateProgress(): void {
@@ -228,6 +231,8 @@ export class PlayerView {
   }
 
   destroy(): void {
+    document.removeEventListener("touchmove", this.onDocTouchMove);
+    document.removeEventListener("touchend", this.onDocTouchEnd);
     this.containerEl.remove();
   }
 
@@ -281,7 +286,7 @@ export class PlayerView {
       e.preventDefault();
     }, { passive: false });
 
-    document.addEventListener("touchmove", (e: TouchEvent) => {
+    this.onDocTouchMove = (e: TouchEvent) => {
       if (!this.dragging) return;
       const deltaY = this.dragStartY - e.touches[0].clientY;
       let newBottom = this.dragStartBottom + deltaY;
@@ -289,15 +294,18 @@ export class PlayerView {
       newBottom = Math.max(0, Math.min(newBottom, maxBottom));
       this.containerEl.style.bottom = `${newBottom}px`;
       e.preventDefault();
-    }, { passive: false });
+    };
 
-    document.addEventListener("touchend", () => {
+    this.onDocTouchEnd = () => {
       if (!this.dragging) return;
       this.dragging = false;
       this.containerEl.removeClass("dragging");
       const bottom = window.innerHeight - this.containerEl.getBoundingClientRect().top - this.containerEl.offsetHeight;
       this.savePosition(bottom);
-    });
+    };
+
+    document.addEventListener("touchmove", this.onDocTouchMove, { passive: false });
+    document.addEventListener("touchend", this.onDocTouchEnd);
   }
 
   private formatTime(seconds: number): string {

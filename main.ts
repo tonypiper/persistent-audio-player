@@ -185,11 +185,15 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}T${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
   }
 
+  private getAudioFrontmatter(file: TFile): AudioFrontmatter | undefined {
+    const cache = this.app.metadataCache.getFileCache(file);
+    return cache?.frontmatter as AudioFrontmatter | undefined;
+  }
+
   private getSavedPosition(sourcePath: string): number | null {
     const file = this.app.vault.getAbstractFileByPath(sourcePath);
     if (!(file instanceof TFile)) return null;
-    const cache = this.app.metadataCache.getFileCache(file);
-    const pos = (cache?.frontmatter as AudioFrontmatter | undefined)?.audio_position;
+    const pos = this.getAudioFrontmatter(file)?.audio_position;
     if (typeof pos === "number") return pos;
     if (typeof pos === "string") return this.parseHMS(pos);
     return null;
@@ -221,8 +225,7 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
     if (!view) return;
     const file = view.file;
     if (!file) return;
-    const cache = this.app.metadataCache.getFileCache(file);
-    const fm = cache?.frontmatter as AudioFrontmatter | undefined;
+    const fm = this.getAudioFrontmatter(file);
     const mp3 = fm?.audio;
     if (!mp3) return;
     const title = fm?.title ?? file.basename;
