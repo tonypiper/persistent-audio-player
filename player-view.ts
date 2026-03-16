@@ -1,15 +1,61 @@
+import { App } from "obsidian";
+
 const SPEEDS = [1, 1.25, 1.5, 2];
 const POSITION_KEY = "persistent-audio-player-bar-bottom";
+const SVG_NS = "http://www.w3.org/2000/svg";
 const SVG_SIZE = 18;
-const SVG_ATTRS = `width="${SVG_SIZE}" height="${SVG_SIZE}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"`;
 
-const ICONS = {
-  skipBack: `<svg ${SVG_ATTRS}><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/><text x="12" y="15.5" text-anchor="middle" stroke="none" fill="currentColor" font-size="8" font-weight="bold">15</text></svg>`,
-  play: `<svg ${SVG_ATTRS}><polygon points="6,3 20,12 6,21" fill="currentColor" stroke="none"/></svg>`,
-  pause: `<svg ${SVG_ATTRS}><rect x="5" y="3" width="4" height="18" fill="currentColor" stroke="none" rx="1"/><rect x="15" y="3" width="4" height="18" fill="currentColor" stroke="none" rx="1"/></svg>`,
-  skipFwd: `<svg ${SVG_ATTRS}><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10"/><text x="12" y="15.5" text-anchor="middle" stroke="none" fill="currentColor" font-size="8" font-weight="bold">15</text></svg>`,
-  close: `<svg ${SVG_ATTRS}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
-};
+function createSvg(children: (parent: SVGSVGElement) => void): SVGSVGElement {
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("width", String(SVG_SIZE));
+  svg.setAttribute("height", String(SVG_SIZE));
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "2");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+  children(svg);
+  return svg;
+}
+
+function svgEl(parent: SVGSVGElement, tag: string, attrs: Record<string, string>): void {
+  const el = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    el.setAttribute(k, v);
+  }
+  parent.appendChild(el);
+}
+
+function makeSkipIcon(direction: "back" | "fwd"): SVGSVGElement {
+  const isBack = direction === "back";
+  return createSvg((svg) => {
+    svgEl(svg, "path", { d: isBack ? "M1 4v6h6" : "M23 4v6h-6" });
+    svgEl(svg, "path", { d: isBack ? "M3.51 15a9 9 0 1 0 2.13-9.36L1 10" : "M20.49 15a9 9 0 1 1-2.13-9.36L23 10" });
+    svgEl(svg, "text", { x: "12", y: "15.5", "text-anchor": "middle", stroke: "none", fill: "currentColor", "font-size": "8", "font-weight": "bold" });
+    svg.lastElementChild!.textContent = "15";
+  });
+}
+
+function makePlayIcon(): SVGSVGElement {
+  return createSvg((svg) => {
+    svgEl(svg, "polygon", { points: "6,3 20,12 6,21", fill: "currentColor", stroke: "none" });
+  });
+}
+
+function makePauseIcon(): SVGSVGElement {
+  return createSvg((svg) => {
+    svgEl(svg, "rect", { x: "5", y: "3", width: "4", height: "18", fill: "currentColor", stroke: "none", rx: "1" });
+    svgEl(svg, "rect", { x: "15", y: "3", width: "4", height: "18", fill: "currentColor", stroke: "none", rx: "1" });
+  });
+}
+
+function makeCloseIcon(): SVGSVGElement {
+  return createSvg((svg) => {
+    svgEl(svg, "line", { x1: "18", y1: "6", x2: "6", y2: "18" });
+    svgEl(svg, "line", { x1: "6", y1: "6", x2: "18", y2: "18" });
+  });
+}
 
 export class PlayerView {
   containerEl: HTMLElement;
@@ -21,6 +67,9 @@ export class PlayerView {
   private mobileProgressFill: HTMLElement;
   private timeEl: HTMLElement;
   private audio: HTMLAudioElement;
+  private app: App;
+  private playIcon: SVGSVGElement;
+  private pauseIcon: SVGSVGElement;
   private seeking = false;
   private speedIndex = 0;
   private onTitleClick: (() => void) | null = null;
@@ -31,8 +80,15 @@ export class PlayerView {
   private dragStartY = 0;
   private dragStartBottom = 0;
 
-  constructor(audio: HTMLAudioElement) {
+  // Bound document listeners for cleanup
+  private onDocTouchMove: (e: TouchEvent) => void;
+  private onDocTouchEnd: () => void;
+
+  constructor(audio: HTMLAudioElement, app: App) {
     this.audio = audio;
+    this.app = app;
+    this.playIcon = makePlayIcon();
+    this.pauseIcon = makePauseIcon();
 
     this.containerEl = document.createElement("div");
     this.containerEl.addClass("persistent-audio-bar", "hidden");
@@ -56,25 +112,25 @@ export class PlayerView {
     this.setupDrag(dragHandle);
 
     const skipBackBtn = this.containerEl.createEl("button");
-    skipBackBtn.innerHTML = ICONS.skipBack;
+    skipBackBtn.appendChild(makeSkipIcon("back"));
     skipBackBtn.setAttribute("aria-label", "Skip back 15s");
     skipBackBtn.addEventListener("click", () => {
       this.audio.currentTime = Math.max(this.audio.currentTime - 15, 0);
     });
 
     this.playPauseBtn = this.containerEl.createEl("button");
-    this.playPauseBtn.innerHTML = ICONS.play;
-    this.playPauseBtn.setAttribute("aria-label", "Play/Pause");
+    this.playPauseBtn.appendChild(this.playIcon);
+    this.playPauseBtn.setAttribute("aria-label", "Play/pause");
     this.playPauseBtn.addEventListener("click", () => {
       if (this.audio.paused) {
-        this.audio.play();
+        void this.audio.play();
       } else {
         this.audio.pause();
       }
     });
 
     const skipFwdBtn = this.containerEl.createEl("button");
-    skipFwdBtn.innerHTML = ICONS.skipFwd;
+    skipFwdBtn.appendChild(makeSkipIcon("fwd"));
     skipFwdBtn.setAttribute("aria-label", "Skip forward 15s");
     skipFwdBtn.addEventListener("click", () => {
       this.audio.currentTime = Math.min(
@@ -125,7 +181,7 @@ export class PlayerView {
     const closeBtn = this.containerEl.createEl("button", {
       cls: "persistent-audio-close",
     });
-    closeBtn.innerHTML = ICONS.close;
+    closeBtn.appendChild(makeCloseIcon());
     closeBtn.setAttribute("aria-label", "Close player");
     closeBtn.addEventListener("click", () => {
       if (this.onClose) this.onClose();
@@ -149,7 +205,11 @@ export class PlayerView {
   }
 
   updatePlayState(playing: boolean): void {
-    this.playPauseBtn.innerHTML = playing ? ICONS.pause : ICONS.play;
+    const current = playing ? this.pauseIcon : this.playIcon;
+    if (this.playPauseBtn.firstChild !== current) {
+      this.playPauseBtn.empty();
+      this.playPauseBtn.appendChild(current);
+    }
   }
 
   updateProgress(): void {
@@ -171,6 +231,8 @@ export class PlayerView {
   }
 
   destroy(): void {
+    document.removeEventListener("touchmove", this.onDocTouchMove);
+    document.removeEventListener("touchend", this.onDocTouchEnd);
     this.containerEl.remove();
   }
 
@@ -181,24 +243,16 @@ export class PlayerView {
   }
 
   private savePosition(bottom: number): void {
-    try {
-      localStorage.setItem(POSITION_KEY, String(bottom));
-    } catch {
-      // localStorage may not be available
-    }
+    this.app.saveLocalStorage(POSITION_KEY, String(bottom));
   }
 
   private restorePosition(): void {
-    try {
-      const saved = localStorage.getItem(POSITION_KEY);
-      if (saved !== null) {
-        const bottom = parseInt(saved, 10);
-        if (!isNaN(bottom) && bottom > 0) {
-          this.containerEl.style.bottom = `${bottom}px`;
-        }
+    const saved = this.app.loadLocalStorage(POSITION_KEY) as string | null;
+    if (typeof saved === "string") {
+      const bottom = parseInt(saved, 10);
+      if (!isNaN(bottom) && bottom > 0) {
+        this.containerEl.style.bottom = `${bottom}px`;
       }
-    } catch {
-      // localStorage may not be available
     }
   }
 
@@ -232,7 +286,7 @@ export class PlayerView {
       e.preventDefault();
     }, { passive: false });
 
-    document.addEventListener("touchmove", (e: TouchEvent) => {
+    this.onDocTouchMove = (e: TouchEvent) => {
       if (!this.dragging) return;
       const deltaY = this.dragStartY - e.touches[0].clientY;
       let newBottom = this.dragStartBottom + deltaY;
@@ -240,15 +294,18 @@ export class PlayerView {
       newBottom = Math.max(0, Math.min(newBottom, maxBottom));
       this.containerEl.style.bottom = `${newBottom}px`;
       e.preventDefault();
-    }, { passive: false });
+    };
 
-    document.addEventListener("touchend", () => {
+    this.onDocTouchEnd = () => {
       if (!this.dragging) return;
       this.dragging = false;
       this.containerEl.removeClass("dragging");
       const bottom = window.innerHeight - this.containerEl.getBoundingClientRect().top - this.containerEl.offsetHeight;
       this.savePosition(bottom);
-    });
+    };
+
+    document.addEventListener("touchmove", this.onDocTouchMove, { passive: false });
+    document.addEventListener("touchend", this.onDocTouchEnd);
   }
 
   private formatTime(seconds: number): string {
