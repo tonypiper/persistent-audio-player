@@ -142,3 +142,15 @@
 .is-mobile .persistent-audio-drag-handle:active .persistent-audio-grip-line {
   background: var(--text-accent);
 }
+
+/* On mobile, hide progress bar and time to make room */
+.is-mobile .persistent-audio-progress,
+.is-mobile .persistent-audio-time {
+  display: none;
+}
+
+/* Make close button more visible on mobile */
+.is-mobile .persistent-audio-close {
+  margin-left: auto;
+  flex-shrink: 0;
+}
