@@ -51,4 +51,14 @@ Search for "Persistent Audio Player" in Settings → Community Plugins.
 npm install
 npm run dev    # watch mode
 npm run build  # production build
+npm run lint   # run eslint
 ```
+
+## Releasing
+
+```bash
+npm version <major|minor|patch>   # bumps manifest.json + versions.json, creates git tag
+git push && git push --tags       # triggers GitHub Actions release
+```
+
+The release workflow builds the plugin and creates a GitHub release with `main.js`, `manifest.json`, and `styles.css` attached. Compatible with [BRAT](https://github.com/TfTHacker/obsidian42-brat) for beta installs on mobile.
