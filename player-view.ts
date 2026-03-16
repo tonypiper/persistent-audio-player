@@ -112,7 +112,6 @@ export class PlayerView {
     this.setupDrag(dragHandle);
 
     const skipBackBtn = this.containerEl.createEl("button");
-    skipBackBtn.empty();
     skipBackBtn.appendChild(makeSkipBackIcon());
     skipBackBtn.setAttribute("aria-label", "Skip back 15s");
     skipBackBtn.addEventListener("click", () => {
@@ -120,7 +119,6 @@ export class PlayerView {
     });
 
     this.playPauseBtn = this.containerEl.createEl("button");
-    this.playPauseBtn.empty();
     this.playPauseBtn.appendChild(makePlayIcon());
     this.playPauseBtn.setAttribute("aria-label", "Play/pause");
     this.playPauseBtn.addEventListener("click", () => {
@@ -132,7 +130,6 @@ export class PlayerView {
     });
 
     const skipFwdBtn = this.containerEl.createEl("button");
-    skipFwdBtn.empty();
     skipFwdBtn.appendChild(makeSkipFwdIcon());
     skipFwdBtn.setAttribute("aria-label", "Skip forward 15s");
     skipFwdBtn.addEventListener("click", () => {
@@ -184,7 +181,6 @@ export class PlayerView {
     const closeBtn = this.containerEl.createEl("button", {
       cls: "persistent-audio-close",
     });
-    closeBtn.empty();
     closeBtn.appendChild(makeCloseIcon());
     closeBtn.setAttribute("aria-label", "Close player");
     closeBtn.addEventListener("click", () => {
