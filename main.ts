@@ -1,6 +1,13 @@
 import { Plugin, MarkdownPostProcessorContext, MarkdownView, TFile } from "obsidian";
 import { PlayerView } from "./player-view";
 
+interface AudioFrontmatter {
+  audio?: string;
+  audio_position?: string | number;
+  last_played?: string;
+  title?: string;
+}
+
 const AUDIO_EXTENSIONS = /\.(mp3|wav|ogg|m4a|aac|webm|flac)$/i;
 
 export default class PersistentAudioPlayerPlugin extends Plugin {
@@ -11,7 +18,7 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
 
   async onload(): Promise<void> {
     this.audio = new Audio();
-    this.playerView = new PlayerView(this.audio);
+    this.playerView = new PlayerView(this.audio, this.app);
 
     this.audio.addEventListener("play", () =>
       this.playerView.updatePlayState(true)
@@ -38,14 +45,14 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
 
     this.addCommand({
       id: "play-pause",
-      name: "Play / Pause",
+      name: "Play / pause",
       callback: () => {
         if (!this.currentUrl) {
           this.playFromFrontmatter();
           return;
         }
         if (this.audio.paused) {
-          this.audio.play();
+          void this.audio.play();
         } else {
           this.audio.pause();
         }
@@ -125,7 +132,7 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
   play(url: string, title: string, sourcePath: string): void {
     if (this.currentUrl === url) {
       if (this.audio.paused) {
-        this.audio.play();
+        void this.audio.play();
       } else {
         this.audio.pause();
       }
@@ -151,13 +158,13 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
       this.audio.addEventListener("canplay", onCanPlay);
     }
 
-    this.audio.play();
+    void this.audio.play();
     this.playerView.show(
       title,
       () => {
         const file = this.app.vault.getAbstractFileByPath(sourcePath);
         if (file instanceof TFile) {
-          this.app.workspace.getLeaf(false).openFile(file);
+          void this.app.workspace.getLeaf(false).openFile(file);
         }
       },
       () => this.stop(),
@@ -168,7 +175,7 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
   private saveLastPlayed(sourcePath: string): void {
     const file = this.app.vault.getAbstractFileByPath(sourcePath);
     if (!(file instanceof TFile)) return;
-    this.app.fileManager.processFrontMatter(file, (fm) => {
+    void this.app.fileManager.processFrontMatter(file, (fm: AudioFrontmatter) => {
       fm.last_played = this.nowStamp();
     });
   }
@@ -182,7 +189,7 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
     const file = this.app.vault.getAbstractFileByPath(sourcePath);
     if (!(file instanceof TFile)) return null;
     const cache = this.app.metadataCache.getFileCache(file);
-    const pos = cache?.frontmatter?.audio_position;
+    const pos = (cache?.frontmatter as AudioFrontmatter | undefined)?.audio_position;
     if (typeof pos === "number") return pos;
     if (typeof pos === "string") return this.parseHMS(pos);
     return null;
@@ -194,7 +201,7 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
     if (!(file instanceof TFile)) return;
     const position = this.formatHMS(Math.floor(this.audio.currentTime));
     const stamp = this.nowStamp();
-    this.app.fileManager.processFrontMatter(file, (fm) => {
+    void this.app.fileManager.processFrontMatter(file, (fm: AudioFrontmatter) => {
       fm.audio_position = position;
       fm.last_played = stamp;
     });
@@ -204,7 +211,7 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
     if (!this.currentSourcePath) return;
     const file = this.app.vault.getAbstractFileByPath(this.currentSourcePath);
     if (!(file instanceof TFile)) return;
-    this.app.fileManager.processFrontMatter(file, (fm) => {
+    void this.app.fileManager.processFrontMatter(file, (fm: AudioFrontmatter) => {
       delete fm.audio_position;
     });
   }
@@ -215,9 +222,10 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
     const file = view.file;
     if (!file) return;
     const cache = this.app.metadataCache.getFileCache(file);
-    const mp3 = cache?.frontmatter?.audio;
+    const fm = cache?.frontmatter as AudioFrontmatter | undefined;
+    const mp3 = fm?.audio;
     if (!mp3) return;
-    const title = cache?.frontmatter?.title || file.basename;
+    const title = fm?.title ?? file.basename;
     this.play(mp3, title, file.path);
   }
 
@@ -227,16 +235,17 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
   ): void {
     // Inject play button for frontmatter audio at top of note
     const cache = this.app.metadataCache.getCache(ctx.sourcePath);
-    if (cache?.frontmatter?.audio) {
+    const cacheFm = cache?.frontmatter as AudioFrontmatter | undefined;
+    if (cacheFm?.audio) {
       const sectionInfo = ctx.getSectionInfo(el);
       if (sectionInfo && sectionInfo.lineStart === 0) {
-        const mp3Url = cache.frontmatter.audio;
-        const title = cache.frontmatter.title || ctx.sourcePath.replace(/\.md$/, "").split("/").pop();
+        const mp3Url = cacheFm.audio;
+        const title = cacheFm.title ?? ctx.sourcePath.replace(/\.md$/, "").split("/").pop();
         const bar = el.createDiv({ cls: "persistent-audio-frontmatter-bar" });
         const btn = bar.createSpan({ cls: "persistent-audio-play-btn", text: "\u25B6" });
         btn.setAttribute("aria-label", "Play episode audio");
         bar.createSpan({ text: " Play episode" });
-        bar.addEventListener("click", () => this.play(mp3Url, title || "Unknown", ctx.sourcePath));
+        bar.addEventListener("click", () => this.play(mp3Url, title ?? "Unknown", ctx.sourcePath));
       }
     }
 
@@ -254,7 +263,7 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
       btn.addEventListener("click", (e: MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        const title = cache?.frontmatter?.title || this.extractTitle(link, href);
+        const title = cacheFm?.title ?? this.extractTitle(link, href);
         this.play(href, title, ctx.sourcePath);
       });
 
