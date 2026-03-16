@@ -143,6 +143,31 @@
   background: var(--text-accent);
 }
 
+/* Mobile scrubber — thin bar along top edge of player */
+.persistent-audio-mobile-progress {
+  display: none;
+}
+
+.is-mobile .persistent-audio-mobile-progress {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--background-modifier-border);
+  border-radius: 8px 8px 0 0;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.persistent-audio-mobile-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--interactive-accent);
+  transition: width 0.1s linear;
+}
+
 /* On mobile, hide progress bar and time to make room */
 .is-mobile .persistent-audio-progress,
 .is-mobile .persistent-audio-time {

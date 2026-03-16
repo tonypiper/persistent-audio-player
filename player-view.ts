@@ -17,6 +17,8 @@ export class PlayerView {
   private playPauseBtn: HTMLButtonElement;
   private speedBtn: HTMLButtonElement;
   private progressEl: HTMLInputElement;
+  private mobileProgressBar: HTMLElement;
+  private mobileProgressFill: HTMLElement;
   private timeEl: HTMLElement;
   private audio: HTMLAudioElement;
   private seeking = false;
@@ -34,6 +36,15 @@ export class PlayerView {
 
     this.containerEl = document.createElement("div");
     this.containerEl.addClass("persistent-audio-bar", "hidden");
+
+    // Mobile scrubber bar along top edge
+    this.mobileProgressBar = this.containerEl.createEl("div", {
+      cls: "persistent-audio-mobile-progress",
+    });
+    this.mobileProgressFill = this.mobileProgressBar.createEl("div", {
+      cls: "persistent-audio-mobile-progress-fill",
+    });
+    this.setupMobileScrub(this.mobileProgressBar);
 
     // Drag handle (visible on mobile only via CSS)
     const dragHandle = this.containerEl.createEl("span", {
@@ -145,6 +156,7 @@ export class PlayerView {
     if (this.seeking || !this.audio.duration) return;
     const pct = (this.audio.currentTime / this.audio.duration) * 1000;
     this.progressEl.value = String(pct);
+    this.mobileProgressFill.style.width = `${(pct / 10)}%`;
     this.timeEl.textContent = `${this.formatTime(this.audio.currentTime)} / ${this.formatTime(this.audio.duration)}`;
   }
 
@@ -188,6 +200,27 @@ export class PlayerView {
     } catch {
       // localStorage may not be available
     }
+  }
+
+  private setupMobileScrub(bar: HTMLElement): void {
+    const seek = (e: TouchEvent) => {
+      if (!this.audio.duration) return;
+      const rect = bar.getBoundingClientRect();
+      const x = Math.max(0, Math.min(e.touches[0].clientX - rect.left, rect.width));
+      this.audio.currentTime = (x / rect.width) * this.audio.duration;
+    };
+    bar.addEventListener("touchstart", (e: TouchEvent) => {
+      this.seeking = true;
+      seek(e);
+      e.stopPropagation();
+    }, { passive: true });
+    bar.addEventListener("touchmove", (e: TouchEvent) => {
+      if (this.seeking) seek(e);
+      e.stopPropagation();
+    }, { passive: true });
+    bar.addEventListener("touchend", () => {
+      this.seeking = false;
+    });
   }
 
   private setupDrag(handle: HTMLElement): void {

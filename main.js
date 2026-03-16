@@ -49,6 +49,13 @@ var PlayerView = class {
     this.audio = audio;
     this.containerEl = document.createElement("div");
     this.containerEl.addClass("persistent-audio-bar", "hidden");
+    this.mobileProgressBar = this.containerEl.createEl("div", {
+      cls: "persistent-audio-mobile-progress"
+    });
+    this.mobileProgressFill = this.mobileProgressBar.createEl("div", {
+      cls: "persistent-audio-mobile-progress-fill"
+    });
+    this.setupMobileScrub(this.mobileProgressBar);
     const dragHandle = this.containerEl.createEl("span", {
       cls: "persistent-audio-drag-handle"
     });
@@ -144,6 +151,7 @@ var PlayerView = class {
       return;
     const pct = this.audio.currentTime / this.audio.duration * 1e3;
     this.progressEl.value = String(pct);
+    this.mobileProgressFill.style.width = `${pct / 10}%`;
     this.timeEl.textContent = `${this.formatTime(this.audio.currentTime)} / ${this.formatTime(this.audio.duration)}`;
   }
   cycleSpeed() {
@@ -179,6 +187,28 @@ var PlayerView = class {
       }
     } catch (e) {
     }
+  }
+  setupMobileScrub(bar) {
+    const seek = (e) => {
+      if (!this.audio.duration)
+        return;
+      const rect = bar.getBoundingClientRect();
+      const x = Math.max(0, Math.min(e.touches[0].clientX - rect.left, rect.width));
+      this.audio.currentTime = x / rect.width * this.audio.duration;
+    };
+    bar.addEventListener("touchstart", (e) => {
+      this.seeking = true;
+      seek(e);
+      e.stopPropagation();
+    }, { passive: true });
+    bar.addEventListener("touchmove", (e) => {
+      if (this.seeking)
+        seek(e);
+      e.stopPropagation();
+    }, { passive: true });
+    bar.addEventListener("touchend", () => {
+      this.seeking = false;
+    });
   }
   setupDrag(handle) {
     handle.addEventListener("touchstart", (e) => {
