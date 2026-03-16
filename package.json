@@ -1,6 +1,6 @@
 {
   "name": "persistent-audio-player",
-  "version": "1.0.3",
+  "version": "1.0.0",
   "description": "Obsidian plugin for persistent audio playback",
   "main": "main.js",
   "type": "module",
