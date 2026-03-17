@@ -1,4 +1,4 @@
-import { Plugin, MarkdownPostProcessorContext, MarkdownView, TFile } from "obsidian";
+import { Plugin, MarkdownPostProcessorContext, MarkdownView, TFile, EventRef } from "obsidian";
 import { PlayerView } from "./player-view";
 import { YouTubeManager, YOUTUBE_RE } from "./youtube-manager";
 import { formatHMS, parseHMS } from "./time-utils";
@@ -18,6 +18,8 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
   playerView: PlayerView;
   youtubeManager: YouTubeManager | null = null;
   settings: PluginSettings;
+  private ytLeafChangeRef: EventRef | null = null;
+  private ytScanTimeout: ReturnType<typeof setTimeout> | null = null;
   currentUrl: string | null = null;
   currentSourcePath: string | null = null;
 
@@ -158,9 +160,9 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
 
   initYouTubeManager(): void {
     if (this.youtubeManager) return;
-    this.youtubeManager = new YouTubeManager(this.app);
+    const mgr = new YouTubeManager(this.app);
+    this.youtubeManager = mgr;
 
-    // Scan for YouTube iframes on layout ready and when switching notes
     const scanForIframes = (): void => {
       if (!this.youtubeManager) return;
       const activePath = this.app.workspace.getActiveViewOfType(MarkdownView)?.file?.path;
@@ -171,18 +173,28 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
         const src = iframe.getAttribute("src") || "";
         const match = src.match(YOUTUBE_RE);
         if (match) {
-          this.youtubeManager!.trackIframe(iframe, match[1], activePath);
+          mgr.trackIframe(iframe, match[1], activePath);
         }
       });
     };
 
     this.app.workspace.onLayoutReady(() => scanForIframes());
-    this.registerEvent(this.app.workspace.on("active-leaf-change", () => {
-      setTimeout(scanForIframes, 500);
-    }));
+    this.ytLeafChangeRef = this.app.workspace.on("active-leaf-change", () => {
+      if (this.ytScanTimeout !== null) clearTimeout(this.ytScanTimeout);
+      this.ytScanTimeout = setTimeout(scanForIframes, 500);
+    });
+    this.registerEvent(this.ytLeafChangeRef);
   }
 
   destroyYouTubeManager(): void {
+    if (this.ytScanTimeout !== null) {
+      clearTimeout(this.ytScanTimeout);
+      this.ytScanTimeout = null;
+    }
+    if (this.ytLeafChangeRef) {
+      this.app.workspace.offref(this.ytLeafChangeRef);
+      this.ytLeafChangeRef = null;
+    }
     if (!this.youtubeManager) return;
     this.youtubeManager.destroy();
     this.youtubeManager = null;

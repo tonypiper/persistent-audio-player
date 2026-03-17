@@ -1,22 +1,5 @@
 import { App } from "obsidian";
-
-const SVG_NS = "http://www.w3.org/2000/svg";
-
-function closeIcon(): SVGSVGElement {
-  const svg = document.createElementNS(SVG_NS, "svg");
-  svg.setAttribute("width", "16");
-  svg.setAttribute("height", "16");
-  svg.setAttribute("viewBox", "0 0 24 24");
-  svg.setAttribute("fill", "none");
-  svg.setAttribute("stroke", "currentColor");
-  svg.setAttribute("stroke-width", "2");
-  svg.setAttribute("stroke-linecap", "round");
-  svg.setAttribute("stroke-linejoin", "round");
-  const p = document.createElementNS(SVG_NS, "path");
-  p.setAttribute("d", "M18 6L6 18M6 6l12 12");
-  svg.appendChild(p);
-  return svg;
-}
+import { makeCloseIcon } from "./svg-icons";
 
 export class YouTubeMiniPlayer {
   containerEl: HTMLElement;
@@ -32,36 +15,37 @@ export class YouTubeMiniPlayer {
   private dragStartLeft = 0;
   private dragStartTop = 0;
 
+  // Stored listeners for cleanup
+  private boundMouseMove: ((e: MouseEvent) => void) | null = null;
+  private boundMouseUp: (() => void) | null = null;
+
   constructor(_app: App) {
     this.isMobile = document.body.classList.contains("is-mobile");
 
     this.containerEl = document.createElement("div");
     this.containerEl.addClass("yt-mini-player", "hidden");
 
+    const handleClose = (): void => {
+      if (this.onCloseCallback) this.onCloseCallback();
+    };
+
     if (!this.isMobile) {
-      // Desktop: drag bar with close button
       const header = this.containerEl.createEl("div", { cls: "yt-mini-player-header" });
       header.createEl("span", { cls: "yt-mini-player-drag-handle", text: "\u2261" });
       const headerClose = header.createEl("button", { cls: "yt-mini-player-header-close" });
-      headerClose.appendChild(closeIcon());
+      headerClose.appendChild(makeCloseIcon(16));
       headerClose.setAttribute("aria-label", "Close");
-      headerClose.addEventListener("click", () => {
-        if (this.onCloseCallback) this.onCloseCallback();
-      });
+      headerClose.addEventListener("click", handleClose);
       this.setupDrag(header, headerClose);
     } else {
-      // Mobile: overlay close button
       const closeBtn = this.containerEl.createEl("button", { cls: "yt-mini-player-close" });
-      closeBtn.appendChild(closeIcon());
+      closeBtn.appendChild(makeCloseIcon(16));
       closeBtn.setAttribute("aria-label", "Close");
-      closeBtn.addEventListener("click", () => {
-        if (this.onCloseCallback) this.onCloseCallback();
-      });
+      closeBtn.addEventListener("click", handleClose);
     }
 
     this.videoContainerEl = this.containerEl.createEl("div", { cls: "yt-mini-player-video" });
 
-    // Desktop: resize handle
     if (!this.isMobile) {
       const resizeHandle = this.containerEl.createEl("div", { cls: "yt-mini-player-resize" });
       this.setupResize(resizeHandle);
@@ -94,11 +78,9 @@ export class YouTubeMiniPlayer {
     return this.currentVideoId === videoId;
   }
 
-  isVisible(): boolean {
-    return this.currentVideoId !== null && !this.containerEl.hasClass("hidden");
-  }
-
   destroy(): void {
+    if (this.boundMouseMove) document.removeEventListener("mousemove", this.boundMouseMove);
+    if (this.boundMouseUp) document.removeEventListener("mouseup", this.boundMouseUp);
     this.containerEl.remove();
   }
 
@@ -139,6 +121,8 @@ export class YouTubeMiniPlayer {
   }
 
   private setupDrag(header: HTMLElement, closeBtn: HTMLElement): void {
+    let resizing = false;
+
     header.addEventListener("mousedown", (e: MouseEvent) => {
       if (closeBtn.contains(e.target as Node)) return;
       this.dragging = true;
@@ -147,50 +131,58 @@ export class YouTubeMiniPlayer {
       const rect = this.containerEl.getBoundingClientRect();
       this.dragStartLeft = rect.left;
       this.dragStartTop = rect.top;
-      // Switch from right to left positioning for drag
       this.containerEl.style.left = `${rect.left}px`;
       this.containerEl.style.right = "auto";
       this.containerEl.addClass("dragging");
       e.preventDefault();
     });
 
-    document.addEventListener("mousemove", (e: MouseEvent) => {
-      if (!this.dragging) return;
-      const dx = e.clientX - this.dragStartX;
-      const dy = e.clientY - this.dragStartY;
-      this.containerEl.style.left = `${Math.max(0, this.dragStartLeft + dx)}px`;
-      this.containerEl.style.top = `${Math.max(0, this.dragStartTop + dy)}px`;
-    });
+    // Single set of document listeners handles both drag and resize
+    this.boundMouseMove = (e: MouseEvent): void => {
+      if (this.dragging) {
+        const dx = e.clientX - this.dragStartX;
+        const dy = e.clientY - this.dragStartY;
+        this.containerEl.style.left = `${Math.max(0, this.dragStartLeft + dx)}px`;
+        this.containerEl.style.top = `${Math.max(0, this.dragStartTop + dy)}px`;
+      } else if (resizing) {
+        const dx = e.clientX - this.dragStartX;
+        const newWidth = Math.max(240, this.dragStartLeft + dx); // dragStartLeft reused as startWidth
+        this.containerEl.style.width = `${newWidth}px`;
+      }
+    };
 
-    document.addEventListener("mouseup", () => {
-      if (!this.dragging) return;
-      this.dragging = false;
-      this.containerEl.removeClass("dragging");
-    });
+    this.boundMouseUp = (): void => {
+      if (this.dragging) {
+        this.dragging = false;
+        this.containerEl.removeClass("dragging");
+      }
+      if (resizing) {
+        resizing = false;
+        this.containerEl.removeClass("resizing");
+      }
+    };
+
+    document.addEventListener("mousemove", this.boundMouseMove);
+    document.addEventListener("mouseup", this.boundMouseUp);
+
+    // Expose resizing state for setupResize
+    this._setResizing = (val: boolean, startX: number, startWidth: number): void => {
+      resizing = val;
+      this.dragStartX = startX;
+      this.dragStartLeft = startWidth; // reuse field for startWidth
+    };
   }
 
-  private setupResize(handle: HTMLElement): void {
-    let startX = 0;
-    let startWidth = 0;
+  // Set by setupDrag to share document listeners
+  private _setResizing: ((val: boolean, startX: number, startWidth: number) => void) | null = null;
 
+  private setupResize(handle: HTMLElement): void {
     handle.addEventListener("mousedown", (e: MouseEvent) => {
-      startX = e.clientX;
-      startWidth = this.containerEl.getBoundingClientRect().width;
+      const startWidth = this.containerEl.getBoundingClientRect().width;
       this.containerEl.addClass("resizing");
+      this._setResizing?.(true, e.clientX, startWidth);
       e.preventDefault();
       e.stopPropagation();
-    });
-
-    document.addEventListener("mousemove", (e: MouseEvent) => {
-      if (!this.containerEl.hasClass("resizing")) return;
-      const dx = e.clientX - startX;
-      const newWidth = Math.max(240, startWidth + dx);
-      this.containerEl.style.width = `${newWidth}px`;
-    });
-
-    document.addEventListener("mouseup", () => {
-      if (!this.containerEl.hasClass("resizing")) return;
-      this.containerEl.removeClass("resizing");
     });
   }
 }

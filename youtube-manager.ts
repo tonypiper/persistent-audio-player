@@ -28,13 +28,8 @@ export class YouTubeManager {
   }
 
   trackIframe(iframe: HTMLIFrameElement, videoId: string, sourcePath: string): void {
-    // If same DOM element is already tracked, skip
     for (const entry of this.players.values()) {
       if (entry.iframe === iframe) return;
-    }
-
-    // If we already track this videoId, update to the new iframe element
-    for (const entry of this.players.values()) {
       if (entry.videoId === videoId && entry.sourcePath === sourcePath) {
         entry.intersectionObs?.disconnect();
         entry.iframe = iframe;
