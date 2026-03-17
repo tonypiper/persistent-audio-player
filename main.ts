@@ -43,6 +43,21 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
       }
     );
 
+    // Update last_played when an audio link is clicked to open externally
+    this.registerDomEvent(document, "click", (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!(target instanceof HTMLElement)) return;
+
+      const isAudioLink =
+        // Standard <a> links in markdown body
+        (target.closest("a")?.href && AUDIO_EXTENSIONS.test(target.closest("a")!.href)) ||
+        // Properties panel: click on the "audio" property link
+        (target.closest('.metadata-property[data-property-key="audio"]') &&
+          target.closest(".metadata-link-inner.external-link"));
+
+      if (isAudioLink) this.saveLastPlayedForActiveFile();
+    });
+
     this.addCommand({
       id: "play-pause",
       name: "Play / pause",
@@ -170,6 +185,11 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
       () => this.stop(),
     );
     this.saveLastPlayed(sourcePath);
+  }
+
+  private saveLastPlayedForActiveFile(): void {
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (view?.file) this.saveLastPlayed(view.file.path);
   }
 
   private saveLastPlayed(sourcePath: string): void {
