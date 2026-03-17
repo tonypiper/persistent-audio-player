@@ -9,9 +9,7 @@ interface TrackedPlayer {
   intersectionObs: IntersectionObserver | null;
 }
 
-const YOUTUBE_RE = /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtube-nocookie\.com\/embed\/|youtu\.be\/|releases\.obsidian\.md\/youtube\?v=)([\w-]{11})/;
-
-export { YOUTUBE_RE };
+export const YOUTUBE_RE = /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtube-nocookie\.com\/embed\/|youtu\.be\/|releases\.obsidian\.md\/youtube\?v=)([\w-]{11})/;
 
 export class YouTubeManager {
   private miniPlayer: YouTubeMiniPlayer;
@@ -101,7 +99,7 @@ export class YouTubeManager {
     entry.intersectionObs = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
-          const rootTop = scrollParent ? scrollParent.getBoundingClientRect().top : 0;
+          const rootTop = e.rootBounds?.top ?? 0;
           const aboveRoot = e.boundingClientRect.bottom < rootTop;
           if (!e.isIntersecting && aboveRoot && !this.dismissed) {
             this.showMiniPlayer(entry);
