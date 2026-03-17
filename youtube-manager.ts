@@ -16,14 +16,13 @@ export class YouTubeManager {
   private players = new Map<string, TrackedPlayer>();
   private idCounter = 0;
   private activeEntryId: string | null = null;
-  private dismissed = false;
+  private dismissedIds = new Set<string>();
 
   constructor() {
     this.miniPlayer = new YouTubeMiniPlayer();
   }
 
   scanElement(container: Element, sourcePath: string): void {
-    this.dismissed = false;
     container.querySelectorAll("iframe").forEach((iframe: HTMLIFrameElement) => {
       const src = iframe.getAttribute("src") || "";
       const match = src.match(YOUTUBE_RE);
@@ -38,6 +37,7 @@ export class YouTubeManager {
     for (const [id, entry] of this.players.entries()) {
       if (!entry.iframe.isConnected) {
         entry.intersectionObs?.disconnect();
+        this.dismissedIds.delete(id);
         this.players.delete(id);
       }
     }
@@ -101,14 +101,14 @@ export class YouTubeManager {
         for (const e of entries) {
           const rootTop = e.rootBounds?.top ?? 0;
           const aboveRoot = e.boundingClientRect.bottom < rootTop;
-          if (!e.isIntersecting && aboveRoot && !this.dismissed) {
+          if (!e.isIntersecting && aboveRoot && !this.dismissedIds.has(entry.id)) {
             this.showMiniPlayer(entry);
           } else if (e.isIntersecting) {
             if (this.activeEntryId === entry.id) {
               this.miniPlayer.hide();
               this.activeEntryId = null;
             }
-            this.dismissed = false;
+            this.dismissedIds.delete(entry.id);
           }
         }
       },
@@ -121,21 +121,21 @@ export class YouTubeManager {
   private showMiniPlayer(entry: TrackedPlayer): void {
     if (this.activeEntryId === entry.id) return;
     this.activeEntryId = entry.id;
-    // Copy all attributes from original iframe to preserve CSP/sandbox policies
+    // Clone the iframe so the original stays in place for when the user scrolls back
     const clone = document.createElement("iframe");
     for (const attr of Array.from(entry.iframe.attributes)) {
       clone.setAttribute(attr.name, attr.value);
     }
-    // Add permissions that YouTube needs
-    clone.setAttribute("allow", "autoplay; encrypted-media; accelerometer; gyroscope; fullscreen");
-    // Ensure src is set
-    if (!clone.src || clone.src === "about:blank") {
-      clone.src = entry.iframeSrc;
-    }
+    // Preserve existing allow permissions, only add missing YouTube-required ones
+    const required = ["autoplay", "encrypted-media", "accelerometer", "gyroscope", "fullscreen"];
+    const existing = (entry.iframe.getAttribute("allow") ?? "").split(";").map(s => s.trim()).filter(Boolean);
+    const merged = [...new Set([...existing, ...required])].join("; ");
+    clone.setAttribute("allow", merged);
+    if (!clone.src || clone.src === "about:blank") clone.src = entry.iframeSrc;
     this.miniPlayer.show(clone, entry.id, () => {
       this.miniPlayer.hide();
       this.activeEntryId = null;
-      this.dismissed = true;
+      this.dismissedIds.add(entry.id);
     });
   }
 }

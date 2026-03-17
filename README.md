@@ -37,7 +37,7 @@ All commands are available in the Command Palette and can be assigned to hotkeys
 ## Installation
 
 ### From community plugins
-Search for "Persistent Audio Player" in Settings → Community Plugins.
+Search for "Persistent Media Player" in Settings → Community Plugins.
 
 ### Manual
 1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](../../releases/latest)
