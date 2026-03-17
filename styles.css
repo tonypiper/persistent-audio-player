@@ -53,8 +53,15 @@
   color: var(--text-accent);
 }
 
-.persistent-audio-progress {
+.persistent-audio-progress-row {
   flex: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.persistent-audio-progress {
+  flex: 1;
   accent-color: var(--interactive-accent);
   cursor: pointer;
 }
@@ -108,9 +115,12 @@
   bottom: 48px;
   left: 8px;
   right: 8px;
+  height: auto;
+  flex-wrap: wrap;
   border-radius: 8px;
   border: 1px solid var(--background-modifier-border);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 4px 12px 6px;
 }
 
 .is-mobile .persistent-audio-bar.dragging {
@@ -143,35 +153,11 @@
   background: var(--text-accent);
 }
 
-/* Mobile scrubber — thin bar along top edge of player */
-.persistent-audio-mobile-progress {
-  display: none;
-}
 
-.is-mobile .persistent-audio-mobile-progress {
-  display: block;
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: var(--background-modifier-border);
-  border-radius: 8px 8px 0 0;
-  overflow: hidden;
-  touch-action: none;
-}
-
-.persistent-audio-mobile-progress-fill {
-  height: 100%;
-  width: 0%;
-  background: var(--interactive-accent);
-  transition: width 0.1s linear;
-}
-
-/* On mobile, hide progress bar and time to make room */
-.is-mobile .persistent-audio-progress,
-.is-mobile .persistent-audio-time {
-  display: none;
+/* On mobile, progress row wraps to a second line */
+.is-mobile .persistent-audio-progress-row {
+  order: 10;
+  flex-basis: 100%;
 }
 
 /* Make close button more visible on mobile */
