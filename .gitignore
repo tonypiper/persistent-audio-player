@@ -22,5 +22,5 @@ data.json
 .DS_Store
 
 # Claude Code
-.claude
-!.claude/commands
+.claude/*
+!.claude/commands/
