@@ -2,6 +2,7 @@ import { Plugin, MarkdownPostProcessorContext, MarkdownView, TFile } from "obsid
 import { PlayerView } from "./player-view";
 import { YouTubeManager, YOUTUBE_RE } from "./youtube-manager";
 import { formatHMS, parseHMS } from "./time-utils";
+import { PluginSettings, DEFAULT_SETTINGS, PersistentAudioPlayerSettingTab } from "./settings";
 
 interface AudioFrontmatter {
   audio?: string;
@@ -15,14 +16,21 @@ const AUDIO_EXTENSIONS = /\.(mp3|wav|ogg|m4a|aac|webm|flac)$/i;
 export default class PersistentAudioPlayerPlugin extends Plugin {
   audio: HTMLAudioElement;
   playerView: PlayerView;
-  youtubeManager: YouTubeManager;
+  youtubeManager: YouTubeManager | null = null;
+  settings: PluginSettings;
   currentUrl: string | null = null;
   currentSourcePath: string | null = null;
 
   async onload(): Promise<void> {
+    await this.loadSettings();
+    this.addSettingTab(new PersistentAudioPlayerSettingTab(this.app, this));
+
     this.audio = new Audio();
     this.playerView = new PlayerView(this.audio, this.app);
-    this.youtubeManager = new YouTubeManager(this.app);
+
+    if (this.settings.enableYouTubeMiniPlayer) {
+      this.initYouTubeManager();
+    }
 
     this.audio.addEventListener("play", () =>
       this.playerView.updatePlayState(true)
@@ -46,27 +54,6 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
         this.processElement(el, ctx);
       }
     );
-
-    // Scan for YouTube iframes on layout ready and when switching notes
-    const scanForIframes = (): void => {
-      const activePath = this.app.workspace.getActiveViewOfType(MarkdownView)?.file?.path;
-      if (!activePath) return;
-      const leaf = document.querySelector(".workspace-leaf.mod-active");
-      if (!leaf) return;
-      leaf.querySelectorAll("iframe").forEach((iframe: HTMLIFrameElement) => {
-        const src = iframe.getAttribute("src") || "";
-        const match = src.match(YOUTUBE_RE);
-        if (match) {
-          this.youtubeManager.trackIframe(iframe, match[1], activePath);
-        }
-      });
-    };
-
-    this.app.workspace.onLayoutReady(() => scanForIframes());
-    this.registerEvent(this.app.workspace.on("active-leaf-change", () => {
-      // Small delay to let the new leaf render its iframes
-      setTimeout(scanForIframes, 500);
-    }));
 
     // Update last_played when an audio link is clicked to open externally
     this.registerDomEvent(document, "click", (e: MouseEvent) => {
@@ -158,7 +145,47 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
     this.audio.pause();
     this.audio.src = "";
     this.playerView.destroy();
+    this.destroyYouTubeManager();
+  }
+
+  async loadSettings(): Promise<void> {
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+  }
+
+  async saveSettings(): Promise<void> {
+    await this.saveData(this.settings);
+  }
+
+  initYouTubeManager(): void {
+    if (this.youtubeManager) return;
+    this.youtubeManager = new YouTubeManager(this.app);
+
+    // Scan for YouTube iframes on layout ready and when switching notes
+    const scanForIframes = (): void => {
+      if (!this.youtubeManager) return;
+      const activePath = this.app.workspace.getActiveViewOfType(MarkdownView)?.file?.path;
+      if (!activePath) return;
+      const leaf = document.querySelector(".workspace-leaf.mod-active");
+      if (!leaf) return;
+      leaf.querySelectorAll("iframe").forEach((iframe: HTMLIFrameElement) => {
+        const src = iframe.getAttribute("src") || "";
+        const match = src.match(YOUTUBE_RE);
+        if (match) {
+          this.youtubeManager!.trackIframe(iframe, match[1], activePath);
+        }
+      });
+    };
+
+    this.app.workspace.onLayoutReady(() => scanForIframes());
+    this.registerEvent(this.app.workspace.on("active-leaf-change", () => {
+      setTimeout(scanForIframes, 500);
+    }));
+  }
+
+  destroyYouTubeManager(): void {
+    if (!this.youtubeManager) return;
     this.youtubeManager.destroy();
+    this.youtubeManager = null;
   }
 
   stop(): void {
@@ -320,14 +347,16 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
     });
 
     // Detect YouTube iframes and track them for mini-player
-    const iframes = el.querySelectorAll("iframe");
-    iframes.forEach((iframe: HTMLIFrameElement) => {
-      const src = iframe.getAttribute("src") || "";
-      const match = src.match(YOUTUBE_RE);
-      if (match) {
-        void this.youtubeManager.trackIframe(iframe, match[1], ctx.sourcePath);
-      }
-    });
+    if (this.youtubeManager) {
+      const iframes = el.querySelectorAll("iframe");
+      iframes.forEach((iframe: HTMLIFrameElement) => {
+        const src = iframe.getAttribute("src") || "";
+        const match = src.match(YOUTUBE_RE);
+        if (match) {
+          this.youtubeManager!.trackIframe(iframe, match[1], ctx.sourcePath);
+        }
+      });
+    }
   }
 
   private extractTitle(link: HTMLAnchorElement, href: string): string {
