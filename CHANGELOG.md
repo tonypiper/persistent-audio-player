@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0
+
+- Mobile: two-row player layout with full-width scrub bar and time display
+- Remove thin top-edge progress bar (replaced by full scrub bar)
+- Update `last_played` when audio link opened externally (browser playback)
+- Add `/release` command and improve release workflow
+- Add CLAUDE.md
+
 ## 1.0.4
 
 - Update `last_played` when an audio link is opened externally (browser playback)
