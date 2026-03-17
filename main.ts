@@ -2,7 +2,7 @@ import { Plugin, MarkdownPostProcessorContext, MarkdownView, TFile, EventRef } f
 import { PlayerView } from "./player-view";
 import { YouTubeManager } from "./youtube-manager";
 import { formatHMS, parseHMS } from "./time-utils";
-import { PluginSettings, DEFAULT_SETTINGS, PersistentAudioPlayerSettingTab } from "./settings";
+import { PluginSettings, DEFAULT_SETTINGS, PersistentMediaPlayerSettingTab } from "./settings";
 
 interface AudioFrontmatter {
   audio?: string;
@@ -13,7 +13,7 @@ interface AudioFrontmatter {
 
 const AUDIO_EXTENSIONS = /\.(mp3|wav|ogg|m4a|aac|webm|flac)$/i;
 
-export default class PersistentAudioPlayerPlugin extends Plugin {
+export default class PersistentMediaPlayerPlugin extends Plugin {
   audio: HTMLAudioElement;
   playerView: PlayerView;
   youtubeManager: YouTubeManager | null = null;
@@ -25,7 +25,7 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
 
   async onload(): Promise<void> {
     await this.loadSettings();
-    this.addSettingTab(new PersistentAudioPlayerSettingTab(this.app, this));
+    this.addSettingTab(new PersistentMediaPlayerSettingTab(this.app, this));
 
     this.audio = new Audio();
     this.playerView = new PlayerView(this.audio, this.app);
@@ -322,8 +322,8 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
       if (sectionInfo && sectionInfo.lineStart === 0) {
         const mp3Url = cacheFm.audio;
         const title = cacheFm.title ?? ctx.sourcePath.replace(/\.md$/, "").split("/").pop();
-        const bar = el.createDiv({ cls: "persistent-audio-frontmatter-bar" });
-        const btn = bar.createSpan({ cls: "persistent-audio-play-btn", text: "\u25B6" });
+        const bar = el.createDiv({ cls: "persistent-media-frontmatter-bar" });
+        const btn = bar.createSpan({ cls: "persistent-media-play-btn", text: "\u25B6" });
         btn.setAttribute("aria-label", "Play episode audio");
         bar.createSpan({ text: " Play episode" });
         bar.addEventListener("click", () => this.play(mp3Url, title ?? "Unknown", ctx.sourcePath));
@@ -337,7 +337,7 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
       if (!href || !AUDIO_EXTENSIONS.test(href)) return;
 
       const btn = document.createElement("span");
-      btn.addClass("persistent-audio-play-btn");
+      btn.addClass("persistent-media-play-btn");
       btn.textContent = "\u25B6";
       btn.setAttribute("aria-label", "Play audio");
 

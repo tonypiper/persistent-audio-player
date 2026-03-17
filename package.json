@@ -1,7 +1,7 @@
 {
-  "name": "persistent-audio-player",
+  "name": "persistent-media-player",
   "version": "1.1.0",
-  "description": "Obsidian plugin for persistent audio playback",
+  "description": "Obsidian plugin for persistent media playback",
   "main": "main.js",
   "type": "module",
   "license": "MIT",

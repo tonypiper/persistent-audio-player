@@ -1,4 +1,4 @@
-.persistent-audio-bar {
+.persistent-media-bar {
   position: fixed;
   bottom: 0;
   left: 0;
@@ -15,11 +15,11 @@
   color: var(--text-normal);
 }
 
-.persistent-audio-bar.hidden {
+.persistent-media-bar.hidden {
   display: none;
 }
 
-.persistent-audio-bar button {
+.persistent-media-bar button {
   background: none;
   border: none;
   color: var(--text-normal);
@@ -32,15 +32,15 @@
   justify-content: center;
 }
 
-.persistent-audio-bar button svg {
+.persistent-media-bar button svg {
   display: block;
 }
 
-.persistent-audio-bar button:hover {
+.persistent-media-bar button:hover {
   color: var(--text-accent);
 }
 
-.persistent-audio-title {
+.persistent-media-title {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -49,30 +49,30 @@
   cursor: pointer;
 }
 
-.persistent-audio-title:hover {
+.persistent-media-title:hover {
   color: var(--text-accent);
 }
 
-.persistent-audio-progress-row {
+.persistent-media-progress-row {
   flex: 2;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.persistent-audio-progress {
+.persistent-media-progress {
   flex: 1;
   accent-color: var(--interactive-accent);
   cursor: pointer;
 }
 
-.persistent-audio-time {
+.persistent-media-time {
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.persistent-audio-play-btn {
+.persistent-media-play-btn {
   cursor: pointer;
   color: var(--text-accent);
   margin-left: 4px;
@@ -81,11 +81,11 @@
   vertical-align: middle;
 }
 
-.persistent-audio-play-btn:hover {
+.persistent-media-play-btn:hover {
   color: var(--interactive-accent-hover);
 }
 
-.persistent-audio-frontmatter-bar {
+.persistent-media-frontmatter-bar {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -95,23 +95,23 @@
   margin-bottom: 8px;
 }
 
-.persistent-audio-frontmatter-bar:hover {
+.persistent-media-frontmatter-bar:hover {
   color: var(--interactive-accent-hover);
 }
 
-.persistent-audio-speed {
+.persistent-media-speed {
   font-size: var(--font-smallest);
   min-width: 36px;
   text-align: center;
 }
 
 /* Drag handle — hidden on desktop, visible on mobile */
-.persistent-audio-drag-handle {
+.persistent-media-drag-handle {
   display: none;
 }
 
 /* On mobile, float above Obsidian's bottom nav and allow dragging */
-.is-mobile .persistent-audio-bar {
+.is-mobile .persistent-media-bar {
   bottom: 48px;
   left: 8px;
   right: 8px;
@@ -123,12 +123,12 @@
   padding: 4px 12px 6px;
 }
 
-.is-mobile .persistent-audio-bar.dragging {
+.is-mobile .persistent-media-bar.dragging {
   opacity: 0.85;
   transition: none;
 }
 
-.is-mobile .persistent-audio-drag-handle {
+.is-mobile .persistent-media-drag-handle {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -141,7 +141,7 @@
   user-select: none;
 }
 
-.persistent-audio-grip-line {
+.persistent-media-grip-line {
   display: block;
   width: 16px;
   height: 2px;
@@ -149,19 +149,19 @@
   background: var(--text-faint);
 }
 
-.is-mobile .persistent-audio-drag-handle:active .persistent-audio-grip-line {
+.is-mobile .persistent-media-drag-handle:active .persistent-media-grip-line {
   background: var(--text-accent);
 }
 
 
 /* On mobile, progress row wraps to a second line */
-.is-mobile .persistent-audio-progress-row {
+.is-mobile .persistent-media-progress-row {
   order: 10;
   flex-basis: 100%;
 }
 
 /* Make close button more visible on mobile */
-.is-mobile .persistent-audio-close {
+.is-mobile .persistent-media-close {
   margin-left: auto;
   flex-shrink: 0;
 }

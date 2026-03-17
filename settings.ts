@@ -1,5 +1,5 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
-import type PersistentAudioPlayerPlugin from "./main";
+import type PersistentMediaPlayerPlugin from "./main";
 
 export interface PluginSettings {
   enableYouTubeMiniPlayer: boolean;
@@ -9,10 +9,10 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   enableYouTubeMiniPlayer: true,
 };
 
-export class PersistentAudioPlayerSettingTab extends PluginSettingTab {
-  plugin: PersistentAudioPlayerPlugin;
+export class PersistentMediaPlayerSettingTab extends PluginSettingTab {
+  plugin: PersistentMediaPlayerPlugin;
 
-  constructor(app: App, plugin: PersistentAudioPlayerPlugin) {
+  constructor(app: App, plugin: PersistentMediaPlayerPlugin) {
     super(app, plugin);
     this.plugin = plugin;
   }

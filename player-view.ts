@@ -2,7 +2,7 @@ import { App } from "obsidian";
 import { createSvg, svgEl, makeCloseIcon } from "./svg-icons";
 
 const SPEEDS = [1, 1.25, 1.5, 2];
-const POSITION_KEY = "persistent-audio-player-bar-bottom";
+const POSITION_KEY = "persistent-media-player-bar-bottom";
 const SVG_SIZE = 18;
 
 function makeSkipIcon(direction: "back" | "fwd"): SVGSVGElement {
@@ -60,15 +60,15 @@ export class PlayerView {
     this.pauseIcon = makePauseIcon();
 
     this.containerEl = document.createElement("div");
-    this.containerEl.addClass("persistent-audio-bar", "hidden");
+    this.containerEl.addClass("persistent-media-bar", "hidden");
 
     // Drag handle (visible on mobile only via CSS)
     const dragHandle = this.containerEl.createEl("span", {
-      cls: "persistent-audio-drag-handle",
+      cls: "persistent-media-drag-handle",
     });
-    dragHandle.createEl("span", { cls: "persistent-audio-grip-line" });
-    dragHandle.createEl("span", { cls: "persistent-audio-grip-line" });
-    dragHandle.createEl("span", { cls: "persistent-audio-grip-line" });
+    dragHandle.createEl("span", { cls: "persistent-media-grip-line" });
+    dragHandle.createEl("span", { cls: "persistent-media-grip-line" });
+    dragHandle.createEl("span", { cls: "persistent-media-grip-line" });
     this.setupDrag(dragHandle);
 
     const skipBackBtn = this.containerEl.createEl("button");
@@ -100,7 +100,7 @@ export class PlayerView {
     });
 
     this.titleEl = this.containerEl.createEl("span", {
-      cls: "persistent-audio-title",
+      cls: "persistent-media-title",
       text: "",
     });
     this.titleEl.addEventListener("click", () => {
@@ -108,11 +108,11 @@ export class PlayerView {
     });
 
     const progressRow = this.containerEl.createEl("div", {
-      cls: "persistent-audio-progress-row",
+      cls: "persistent-media-progress-row",
     });
 
     this.progressEl = progressRow.createEl("input", {
-      cls: "persistent-audio-progress",
+      cls: "persistent-media-progress",
       type: "range",
     });
     this.progressEl.min = "0";
@@ -131,19 +131,19 @@ export class PlayerView {
     this.progressEl.addEventListener("touchend", () => (this.seeking = false));
 
     this.timeEl = progressRow.createEl("span", {
-      cls: "persistent-audio-time",
+      cls: "persistent-media-time",
       text: "0:00 / 0:00",
     });
 
     this.speedBtn = this.containerEl.createEl("button", {
-      cls: "persistent-audio-speed",
+      cls: "persistent-media-speed",
       text: "1x",
     });
     this.speedBtn.setAttribute("aria-label", "Playback speed");
     this.speedBtn.addEventListener("click", () => this.cycleSpeed());
 
     const closeBtn = this.containerEl.createEl("button", {
-      cls: "persistent-audio-close",
+      cls: "persistent-media-close",
     });
     closeBtn.appendChild(makeCloseIcon());
     closeBtn.setAttribute("aria-label", "Close player");
