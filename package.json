@@ -1,6 +1,6 @@
 {
   "name": "persistent-media-player",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Obsidian plugin for persistent media playback",
   "main": "main.js",
   "type": "module",

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.2
+
+- Fix: dismissed mini-player state now preserved across note re-renders (iframe replacement no longer creates a new entry)
+- Update README to cover YouTube mini-player feature and video support
+
 ## 1.2.1
 
 - Fix: dismissed mini-player no longer reappears after note re-renders

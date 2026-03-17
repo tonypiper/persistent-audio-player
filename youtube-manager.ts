@@ -33,23 +33,30 @@ export class YouTubeManager {
   }
 
   trackIframe(iframe: HTMLIFrameElement, videoId: string, sourcePath: string): void {
-    // Prune stale entries whose iframes are no longer in the DOM
-    for (const [id, entry] of this.players.entries()) {
-      if (!entry.iframe.isConnected) {
-        entry.intersectionObs?.disconnect();
-        this.dismissedIds.delete(id);
-        this.players.delete(id);
-      }
-    }
-
+    // If we already track this exact iframe instance, nothing to do
     for (const entry of this.players.values()) {
       if (entry.iframe === iframe) return;
+    }
+
+    // Match by videoId+sourcePath first (handles re-renders where iframe is replaced).
+    // This preserves the entry id and its dismissed state even when the old iframe
+    // is disconnected, preventing a prune→recreate cycle that would lose dismissed state.
+    for (const entry of this.players.values()) {
       if (entry.videoId === videoId && entry.sourcePath === sourcePath) {
         entry.intersectionObs?.disconnect();
         entry.iframe = iframe;
         entry.iframeSrc = iframe.src;
         this.observeVisibility(entry);
         return;
+      }
+    }
+
+    // Prune entries that are disconnected and weren't matched above
+    for (const [id, entry] of this.players.entries()) {
+      if (!entry.iframe.isConnected) {
+        entry.intersectionObs?.disconnect();
+        this.dismissedIds.delete(id);
+        this.players.delete(id);
       }
     }
 

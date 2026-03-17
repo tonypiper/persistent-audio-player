@@ -1,13 +1,14 @@
-# Persistent Audio Player for Obsidian
+# Persistent Media Player for Obsidian
 
-Audio player that keeps playing when you scroll or switch notes. Built for podcast listeners who take notes while listening.
+Audio and video player that keeps playing when you scroll or switch notes. Built for podcast listeners and video watchers who take notes while consuming media.
 
 ## Features
 
-- **Persistent playback** — audio continues when you scroll, switch notes, or navigate
-- **Auto-detection** — finds audio links (`.mp3`, `.wav`, `.ogg`, `.m4a`, `.aac`, `.webm`, `.flac`) in note body and `audio` frontmatter field
+- **Persistent audio playback** — audio continues when you scroll, switch notes, or navigate
+- **YouTube mini-player** — floating mini-player keeps YouTube videos visible while you scroll past them; dismiss or let it auto-hide when you scroll back
+- **Auto-detection** — finds audio links (`.mp3`, `.wav`, `.ogg`, `.m4a`, `.aac`, `.webm`, `.flac`) in note body and `audio` frontmatter field, and YouTube iframes in note body
 - **Mini-player bar** — sticky bar with play/pause, skip ±15s, seek, speed control, and track title
-- **Position memory** — saves playback position to frontmatter (`audio_position`) so you can resume where you left off
+- **Position memory** — saves audio playback position to frontmatter (`audio_position`) so you can resume where you left off
 - **Last played tracking** — records `last_played` timestamp in frontmatter
 - **Navigate to note** — click the track title in the player bar to jump to the source note
 - **Mobile support** — floating draggable player bar on mobile, respects safe areas
