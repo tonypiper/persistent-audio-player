@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 ## Build & test
-See README.md for commands. Reload in Obsidian: `obsidian plugin:reload id=persistent-audio-player`
+See README.md for commands. Reload in Obsidian: `obsidian plugin:reload id=persistent-media-player`
 
 ## Architecture
 - `main.ts` — plugin lifecycle, audio element, frontmatter read/write, markdown post-processor

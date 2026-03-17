@@ -1,5 +1,8 @@
-import { Plugin, MarkdownPostProcessorContext, MarkdownView, TFile } from "obsidian";
+import { Plugin, MarkdownPostProcessorContext, MarkdownView, TFile, EventRef } from "obsidian";
 import { PlayerView } from "./player-view";
+import { YouTubeManager } from "./youtube-manager";
+import { formatHMS, parseHMS } from "./time-utils";
+import { PluginSettings, DEFAULT_SETTINGS, PersistentMediaPlayerSettingTab } from "./settings";
 
 interface AudioFrontmatter {
   audio?: string;
@@ -10,15 +13,26 @@ interface AudioFrontmatter {
 
 const AUDIO_EXTENSIONS = /\.(mp3|wav|ogg|m4a|aac|webm|flac)$/i;
 
-export default class PersistentAudioPlayerPlugin extends Plugin {
+export default class PersistentMediaPlayerPlugin extends Plugin {
   audio: HTMLAudioElement;
   playerView: PlayerView;
+  youtubeManager: YouTubeManager | null = null;
+  settings: PluginSettings;
+  private ytLeafChangeRef: EventRef | null = null;
+  private ytScanTimeout: ReturnType<typeof setTimeout> | null = null;
   currentUrl: string | null = null;
   currentSourcePath: string | null = null;
 
   async onload(): Promise<void> {
+    await this.loadSettings();
+    this.addSettingTab(new PersistentMediaPlayerSettingTab(this.app, this));
+
     this.audio = new Audio();
     this.playerView = new PlayerView(this.audio, this.app);
+
+    if (this.settings.enableYouTubeMiniPlayer) {
+      this.initYouTubeManager();
+    }
 
     this.audio.addEventListener("play", () =>
       this.playerView.updatePlayState(true)
@@ -133,6 +147,50 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
     this.audio.pause();
     this.audio.src = "";
     this.playerView.destroy();
+    this.destroyYouTubeManager();
+  }
+
+  async loadSettings(): Promise<void> {
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+  }
+
+  async saveSettings(): Promise<void> {
+    await this.saveData(this.settings);
+  }
+
+  initYouTubeManager(): void {
+    if (this.youtubeManager) return;
+    this.youtubeManager = new YouTubeManager();
+
+    const scanForIframes = (): void => {
+      if (!this.youtubeManager) return;
+      const activePath = this.app.workspace.getActiveViewOfType(MarkdownView)?.file?.path;
+      if (!activePath) return;
+      const leaf = document.querySelector(".workspace-leaf.mod-active");
+      if (!leaf) return;
+      this.youtubeManager.scanElement(leaf, activePath);
+    };
+
+    this.app.workspace.onLayoutReady(() => scanForIframes());
+    this.ytLeafChangeRef = this.app.workspace.on("active-leaf-change", () => {
+      if (this.ytScanTimeout !== null) clearTimeout(this.ytScanTimeout);
+      this.ytScanTimeout = setTimeout(scanForIframes, 500);
+    });
+    this.registerEvent(this.ytLeafChangeRef);
+  }
+
+  destroyYouTubeManager(): void {
+    if (this.ytScanTimeout !== null) {
+      clearTimeout(this.ytScanTimeout);
+      this.ytScanTimeout = null;
+    }
+    if (this.ytLeafChangeRef) {
+      this.app.workspace.offref(this.ytLeafChangeRef);
+      this.ytLeafChangeRef = null;
+    }
+    if (!this.youtubeManager) return;
+    this.youtubeManager.destroy();
+    this.youtubeManager = null;
   }
 
   stop(): void {
@@ -215,7 +273,7 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
     if (!(file instanceof TFile)) return null;
     const pos = this.getAudioFrontmatter(file)?.audio_position;
     if (typeof pos === "number") return pos;
-    if (typeof pos === "string") return this.parseHMS(pos);
+    if (typeof pos === "string") return parseHMS(pos);
     return null;
   }
 
@@ -223,7 +281,7 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
     if (!this.currentSourcePath || !this.currentUrl || this.audio.currentTime <= 0) return;
     const file = this.app.vault.getAbstractFileByPath(this.currentSourcePath);
     if (!(file instanceof TFile)) return;
-    const position = this.formatHMS(Math.floor(this.audio.currentTime));
+    const position = formatHMS(Math.floor(this.audio.currentTime));
     const stamp = this.nowStamp();
     void this.app.fileManager.processFrontMatter(file, (fm: AudioFrontmatter) => {
       fm.audio_position = position;
@@ -264,8 +322,8 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
       if (sectionInfo && sectionInfo.lineStart === 0) {
         const mp3Url = cacheFm.audio;
         const title = cacheFm.title ?? ctx.sourcePath.replace(/\.md$/, "").split("/").pop();
-        const bar = el.createDiv({ cls: "persistent-audio-frontmatter-bar" });
-        const btn = bar.createSpan({ cls: "persistent-audio-play-btn", text: "\u25B6" });
+        const bar = el.createDiv({ cls: "persistent-media-frontmatter-bar" });
+        const btn = bar.createSpan({ cls: "persistent-media-play-btn", text: "\u25B6" });
         btn.setAttribute("aria-label", "Play episode audio");
         bar.createSpan({ text: " Play episode" });
         bar.addEventListener("click", () => this.play(mp3Url, title ?? "Unknown", ctx.sourcePath));
@@ -279,7 +337,7 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
       if (!href || !AUDIO_EXTENSIONS.test(href)) return;
 
       const btn = document.createElement("span");
-      btn.addClass("persistent-audio-play-btn");
+      btn.addClass("persistent-media-play-btn");
       btn.textContent = "\u25B6";
       btn.setAttribute("aria-label", "Play audio");
 
@@ -292,21 +350,9 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
 
       link.parentElement?.insertAfter(btn, link);
     });
-  }
 
-  private formatHMS(totalSeconds: number): string {
-    const h = Math.floor(totalSeconds / 3600);
-    const m = Math.floor((totalSeconds % 3600) / 60);
-    const s = totalSeconds % 60;
-    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  }
-
-  private parseHMS(value: string): number | null {
-    const parts = value.split(":").map(Number);
-    if (parts.some(isNaN)) return null;
-    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
-    if (parts.length === 2) return parts[0] * 60 + parts[1];
-    return null;
+    // Detect YouTube iframes and track them for mini-player
+    this.youtubeManager?.scanElement(el, ctx.sourcePath);
   }
 
   private extractTitle(link: HTMLAnchorElement, href: string): string {

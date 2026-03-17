@@ -41,7 +41,7 @@ Search for "Persistent Audio Player" in Settings → Community Plugins.
 
 ### Manual
 1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](../../releases/latest)
-2. Create `.obsidian/plugins/persistent-audio-player/` in your vault
+2. Create `.obsidian/plugins/persistent-media-player/` in your vault
 3. Copy the three files into that directory
 4. Enable the plugin in Settings → Community Plugins
 

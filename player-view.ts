@@ -1,35 +1,13 @@
 import { App } from "obsidian";
+import { createSvg, svgEl, makeCloseIcon } from "./svg-icons";
 
 const SPEEDS = [1, 1.25, 1.5, 2];
-const POSITION_KEY = "persistent-audio-player-bar-bottom";
-const SVG_NS = "http://www.w3.org/2000/svg";
+const POSITION_KEY = "persistent-media-player-bar-bottom";
 const SVG_SIZE = 18;
-
-function createSvg(children: (parent: SVGSVGElement) => void): SVGSVGElement {
-  const svg = document.createElementNS(SVG_NS, "svg");
-  svg.setAttribute("width", String(SVG_SIZE));
-  svg.setAttribute("height", String(SVG_SIZE));
-  svg.setAttribute("viewBox", "0 0 24 24");
-  svg.setAttribute("fill", "none");
-  svg.setAttribute("stroke", "currentColor");
-  svg.setAttribute("stroke-width", "2");
-  svg.setAttribute("stroke-linecap", "round");
-  svg.setAttribute("stroke-linejoin", "round");
-  children(svg);
-  return svg;
-}
-
-function svgEl(parent: SVGSVGElement, tag: string, attrs: Record<string, string>): void {
-  const el = document.createElementNS(SVG_NS, tag);
-  for (const [k, v] of Object.entries(attrs)) {
-    el.setAttribute(k, v);
-  }
-  parent.appendChild(el);
-}
 
 function makeSkipIcon(direction: "back" | "fwd"): SVGSVGElement {
   const isBack = direction === "back";
-  return createSvg((svg) => {
+  return createSvg(SVG_SIZE, (svg) => {
     svgEl(svg, "path", { d: isBack ? "M1 4v6h6" : "M23 4v6h-6" });
     svgEl(svg, "path", { d: isBack ? "M3.51 15a9 9 0 1 0 2.13-9.36L1 10" : "M20.49 15a9 9 0 1 1-2.13-9.36L23 10" });
     svgEl(svg, "text", { x: "12", y: "15.5", "text-anchor": "middle", stroke: "none", fill: "currentColor", "font-size": "8", "font-weight": "bold" });
@@ -38,22 +16,15 @@ function makeSkipIcon(direction: "back" | "fwd"): SVGSVGElement {
 }
 
 function makePlayIcon(): SVGSVGElement {
-  return createSvg((svg) => {
+  return createSvg(SVG_SIZE, (svg) => {
     svgEl(svg, "polygon", { points: "6,3 20,12 6,21", fill: "currentColor", stroke: "none" });
   });
 }
 
 function makePauseIcon(): SVGSVGElement {
-  return createSvg((svg) => {
+  return createSvg(SVG_SIZE, (svg) => {
     svgEl(svg, "rect", { x: "5", y: "3", width: "4", height: "18", fill: "currentColor", stroke: "none", rx: "1" });
     svgEl(svg, "rect", { x: "15", y: "3", width: "4", height: "18", fill: "currentColor", stroke: "none", rx: "1" });
-  });
-}
-
-function makeCloseIcon(): SVGSVGElement {
-  return createSvg((svg) => {
-    svgEl(svg, "line", { x1: "18", y1: "6", x2: "6", y2: "18" });
-    svgEl(svg, "line", { x1: "6", y1: "6", x2: "18", y2: "18" });
   });
 }
 
@@ -89,15 +60,15 @@ export class PlayerView {
     this.pauseIcon = makePauseIcon();
 
     this.containerEl = document.createElement("div");
-    this.containerEl.addClass("persistent-audio-bar", "hidden");
+    this.containerEl.addClass("persistent-media-bar", "hidden");
 
     // Drag handle (visible on mobile only via CSS)
     const dragHandle = this.containerEl.createEl("span", {
-      cls: "persistent-audio-drag-handle",
+      cls: "persistent-media-drag-handle",
     });
-    dragHandle.createEl("span", { cls: "persistent-audio-grip-line" });
-    dragHandle.createEl("span", { cls: "persistent-audio-grip-line" });
-    dragHandle.createEl("span", { cls: "persistent-audio-grip-line" });
+    dragHandle.createEl("span", { cls: "persistent-media-grip-line" });
+    dragHandle.createEl("span", { cls: "persistent-media-grip-line" });
+    dragHandle.createEl("span", { cls: "persistent-media-grip-line" });
     this.setupDrag(dragHandle);
 
     const skipBackBtn = this.containerEl.createEl("button");
@@ -129,7 +100,7 @@ export class PlayerView {
     });
 
     this.titleEl = this.containerEl.createEl("span", {
-      cls: "persistent-audio-title",
+      cls: "persistent-media-title",
       text: "",
     });
     this.titleEl.addEventListener("click", () => {
@@ -137,11 +108,11 @@ export class PlayerView {
     });
 
     const progressRow = this.containerEl.createEl("div", {
-      cls: "persistent-audio-progress-row",
+      cls: "persistent-media-progress-row",
     });
 
     this.progressEl = progressRow.createEl("input", {
-      cls: "persistent-audio-progress",
+      cls: "persistent-media-progress",
       type: "range",
     });
     this.progressEl.min = "0";
@@ -160,19 +131,19 @@ export class PlayerView {
     this.progressEl.addEventListener("touchend", () => (this.seeking = false));
 
     this.timeEl = progressRow.createEl("span", {
-      cls: "persistent-audio-time",
+      cls: "persistent-media-time",
       text: "0:00 / 0:00",
     });
 
     this.speedBtn = this.containerEl.createEl("button", {
-      cls: "persistent-audio-speed",
+      cls: "persistent-media-speed",
       text: "1x",
     });
     this.speedBtn.setAttribute("aria-label", "Playback speed");
     this.speedBtn.addEventListener("click", () => this.cycleSpeed());
 
     const closeBtn = this.containerEl.createEl("button", {
-      cls: "persistent-audio-close",
+      cls: "persistent-media-close",
     });
     closeBtn.appendChild(makeCloseIcon());
     closeBtn.setAttribute("aria-label", "Close player");
