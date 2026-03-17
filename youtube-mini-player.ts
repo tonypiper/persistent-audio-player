@@ -72,13 +72,19 @@ export class YouTubeMiniPlayer {
     this.containerEl.removeClass("hidden");
   }
 
-  hide(): void {
-    const iframe = this.videoContainerEl.querySelector("iframe");
-    if (iframe) iframe.src = "about:blank";
-    this.videoContainerEl.empty();
+  // Removes the iframe from the container and returns it without blanking its src.
+  detach(): HTMLIFrameElement | null {
+    const iframe = this.videoContainerEl.querySelector("iframe") as HTMLIFrameElement | null;
+    if (iframe) this.videoContainerEl.removeChild(iframe);
     this.containerEl.addClass("hidden");
     this.currentVideoId = null;
     this.onCloseCallback = null;
+    return iframe;
+  }
+
+  hide(): void {
+    const iframe = this.detach();
+    if (iframe) iframe.src = "about:blank";
   }
 
   isShowingVideo(videoId: string): boolean {

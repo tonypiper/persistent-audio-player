@@ -210,7 +210,15 @@ export class PlayerView {
   }
 
   private restorePosition(): void {
-    const saved = this.app.loadLocalStorage(POSITION_KEY) as string | null;
+    const OLD_KEY = "persistent-audio-player-bar-bottom";
+    let saved = this.app.loadLocalStorage(POSITION_KEY) as string | null;
+    if (!saved) {
+      const legacy = this.app.loadLocalStorage(OLD_KEY) as string | null;
+      if (legacy) {
+        this.app.saveLocalStorage(POSITION_KEY, legacy);
+        saved = legacy;
+      }
+    }
     if (typeof saved === "string") {
       const bottom = parseInt(saved, 10);
       if (!isNaN(bottom) && bottom > 0) {

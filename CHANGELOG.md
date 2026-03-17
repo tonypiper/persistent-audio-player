@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.1
+
+- Fix: dismissed mini-player no longer reappears after note re-renders
+- Fix: preserve existing iframe `allow` permissions instead of overwriting
+- Fix: original YouTube iframe no longer blank after scrolling back into view
+- Fix: migrate saved player bar position from old plugin ID on first load
+- Fix: README and CSS comment still referenced old plugin name
+
 ## 1.2.0
 
 - Add YouTube mini-player that keeps video visible in a floating window while scrolling
