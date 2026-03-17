@@ -1,4 +1,3 @@
-import { App } from "obsidian";
 import { YouTubeMiniPlayer } from "./youtube-mini-player";
 
 interface TrackedPlayer {
@@ -15,19 +14,25 @@ const YOUTUBE_RE = /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtube-nocookie\.com
 export { YOUTUBE_RE };
 
 export class YouTubeManager {
-  private app: App;
   private miniPlayer: YouTubeMiniPlayer;
   private players = new Map<string, TrackedPlayer>();
   private idCounter = 0;
   private activeEntryId: string | null = null;
   private dismissed = false;
 
-  constructor(app: App) {
-    this.app = app;
-    this.miniPlayer = new YouTubeMiniPlayer(app);
+  constructor() {
+    this.miniPlayer = new YouTubeMiniPlayer();
   }
 
   trackIframe(iframe: HTMLIFrameElement, videoId: string, sourcePath: string): void {
+    // Prune stale entries whose iframes are no longer in the DOM
+    for (const [id, entry] of this.players.entries()) {
+      if (!entry.iframe.isConnected) {
+        entry.intersectionObs?.disconnect();
+        this.players.delete(id);
+      }
+    }
+
     for (const entry of this.players.values()) {
       if (entry.iframe === iframe) return;
       if (entry.videoId === videoId && entry.sourcePath === sourcePath) {
@@ -105,6 +110,7 @@ export class YouTubeManager {
   }
 
   private showMiniPlayer(entry: TrackedPlayer): void {
+    if (this.activeEntryId === entry.id) return;
     this.activeEntryId = entry.id;
     // Copy all attributes from original iframe to preserve CSP/sandbox policies
     const clone = document.createElement("iframe");

@@ -1,5 +1,7 @@
-import { App } from "obsidian";
 import { makeCloseIcon } from "./svg-icons";
+
+// Cached safe-area inset (measured once via probe element)
+let cachedSafeAreaTop: number | null = null;
 
 export class YouTubeMiniPlayer {
   containerEl: HTMLElement;
@@ -8,18 +10,23 @@ export class YouTubeMiniPlayer {
   private onCloseCallback: (() => void) | null = null;
   private isMobile: boolean;
 
-  // Desktop drag state
+  // Drag state
   private dragging = false;
   private dragStartX = 0;
   private dragStartY = 0;
   private dragStartLeft = 0;
   private dragStartTop = 0;
 
+  // Resize state
+  private resizing = false;
+  private resizeStartX = 0;
+  private resizeStartWidth = 0;
+
   // Stored listeners for cleanup
   private boundMouseMove: ((e: MouseEvent) => void) | null = null;
   private boundMouseUp: (() => void) | null = null;
 
-  constructor(_app: App) {
+  constructor() {
     this.isMobile = document.body.classList.contains("is-mobile");
 
     this.containerEl = document.createElement("div");
@@ -87,17 +94,17 @@ export class YouTubeMiniPlayer {
   private positionBelowHeader(): void {
     let top = 0;
 
-    const selectors = [
-      ".workspace-leaf.mod-active .view-content",
-      ".view-content",
-      ".workspace-leaf.mod-active .view-header",
-      ".view-header",
+    const selectors: Array<{ query: string; useTop: boolean }> = [
+      { query: ".workspace-leaf.mod-active .view-content", useTop: true },
+      { query: ".view-content", useTop: true },
+      { query: ".workspace-leaf.mod-active .view-header", useTop: false },
+      { query: ".view-header", useTop: false },
     ];
-    for (const sel of selectors) {
-      const el = document.querySelector(sel);
+    for (const { query, useTop } of selectors) {
+      const el = document.querySelector(query);
       if (el) {
         const rect = el.getBoundingClientRect();
-        const val = sel.includes("view-content") ? rect.top : rect.bottom;
+        const val = useTop ? rect.top : rect.bottom;
         if (val > 0) {
           top = val;
           break;
@@ -109,20 +116,20 @@ export class YouTubeMiniPlayer {
     top = Math.max(top, safeTop);
 
     if (top === 0) {
-      const probe = document.createElement("div");
-      probe.style.cssText = "position:fixed;top:env(safe-area-inset-top,0px);left:0;width:0;height:0;visibility:hidden";
-      document.body.appendChild(probe);
-      const probeTop = probe.getBoundingClientRect().top;
-      probe.remove();
-      if (probeTop > 0) top = probeTop;
+      if (cachedSafeAreaTop === null) {
+        const probe = document.createElement("div");
+        probe.style.cssText = "position:fixed;top:env(safe-area-inset-top,0px);left:0;width:0;height:0;visibility:hidden";
+        document.body.appendChild(probe);
+        cachedSafeAreaTop = probe.getBoundingClientRect().top;
+        probe.remove();
+      }
+      if (cachedSafeAreaTop > 0) top = cachedSafeAreaTop;
     }
 
     this.containerEl.style.top = `${top}px`;
   }
 
   private setupDrag(header: HTMLElement, closeBtn: HTMLElement): void {
-    let resizing = false;
-
     header.addEventListener("mousedown", (e: MouseEvent) => {
       if (closeBtn.contains(e.target as Node)) return;
       this.dragging = true;
@@ -137,17 +144,15 @@ export class YouTubeMiniPlayer {
       e.preventDefault();
     });
 
-    // Single set of document listeners handles both drag and resize
     this.boundMouseMove = (e: MouseEvent): void => {
       if (this.dragging) {
         const dx = e.clientX - this.dragStartX;
         const dy = e.clientY - this.dragStartY;
         this.containerEl.style.left = `${Math.max(0, this.dragStartLeft + dx)}px`;
         this.containerEl.style.top = `${Math.max(0, this.dragStartTop + dy)}px`;
-      } else if (resizing) {
-        const dx = e.clientX - this.dragStartX;
-        const newWidth = Math.max(240, this.dragStartLeft + dx); // dragStartLeft reused as startWidth
-        this.containerEl.style.width = `${newWidth}px`;
+      } else if (this.resizing) {
+        const dx = e.clientX - this.resizeStartX;
+        this.containerEl.style.width = `${Math.max(240, this.resizeStartWidth + dx)}px`;
       }
     };
 
@@ -156,31 +161,22 @@ export class YouTubeMiniPlayer {
         this.dragging = false;
         this.containerEl.removeClass("dragging");
       }
-      if (resizing) {
-        resizing = false;
+      if (this.resizing) {
+        this.resizing = false;
         this.containerEl.removeClass("resizing");
       }
     };
 
     document.addEventListener("mousemove", this.boundMouseMove);
     document.addEventListener("mouseup", this.boundMouseUp);
-
-    // Expose resizing state for setupResize
-    this._setResizing = (val: boolean, startX: number, startWidth: number): void => {
-      resizing = val;
-      this.dragStartX = startX;
-      this.dragStartLeft = startWidth; // reuse field for startWidth
-    };
   }
-
-  // Set by setupDrag to share document listeners
-  private _setResizing: ((val: boolean, startX: number, startWidth: number) => void) | null = null;
 
   private setupResize(handle: HTMLElement): void {
     handle.addEventListener("mousedown", (e: MouseEvent) => {
-      const startWidth = this.containerEl.getBoundingClientRect().width;
+      this.resizing = true;
+      this.resizeStartX = e.clientX;
+      this.resizeStartWidth = this.containerEl.getBoundingClientRect().width;
       this.containerEl.addClass("resizing");
-      this._setResizing?.(true, e.clientX, startWidth);
       e.preventDefault();
       e.stopPropagation();
     });

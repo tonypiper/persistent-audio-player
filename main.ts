@@ -160,7 +160,7 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
 
   initYouTubeManager(): void {
     if (this.youtubeManager) return;
-    const mgr = new YouTubeManager(this.app);
+    const mgr = new YouTubeManager();
     this.youtubeManager = mgr;
 
     const scanForIframes = (): void => {
@@ -183,7 +183,6 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
       if (this.ytScanTimeout !== null) clearTimeout(this.ytScanTimeout);
       this.ytScanTimeout = setTimeout(scanForIframes, 500);
     });
-    this.registerEvent(this.ytLeafChangeRef);
   }
 
   destroyYouTubeManager(): void {
