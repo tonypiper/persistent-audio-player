@@ -56,9 +56,8 @@ npm run lint   # run eslint
 
 ## Releasing
 
-```bash
-npm version <major|minor|patch>   # bumps manifest.json + versions.json, creates git tag
-git push && git push --tags       # triggers GitHub Actions release
-```
+1. Update `CHANGELOG.md` with the new version's entries
+2. Run `npm version <major|minor|patch>` — bumps `manifest.json`, `versions.json`, and `package.json`, stages the changelog, commits, and creates a git tag
+3. `git push && git push --tags` — triggers GitHub Actions release
 
-The release workflow builds the plugin and creates a GitHub release with `main.js`, `manifest.json`, and `styles.css` attached. Compatible with [BRAT](https://github.com/TfTHacker/obsidian42-brat) for beta installs on mobile.
+The release workflow builds the plugin and creates a GitHub release with `main.js`, `manifest.json`, and `styles.css` attached, using the changelog entry as release notes. Compatible with [BRAT](https://github.com/TfTHacker/obsidian42-brat) for beta installs on mobile.
