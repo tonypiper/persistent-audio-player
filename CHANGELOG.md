@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0
+
+- Add YouTube mini-player that keeps video visible in a floating window while scrolling
+- Add settings tab with toggle to enable/disable YouTube mini-player
+- Rename plugin from persistent-audio-player to persistent-media-player
+
 ## 1.1.0
 
 - Mobile: two-row player layout with full-width scrub bar and time display
