@@ -1,6 +1,6 @@
 import { Plugin, MarkdownPostProcessorContext, MarkdownView, TFile, EventRef } from "obsidian";
 import { PlayerView } from "./player-view";
-import { YouTubeManager, YOUTUBE_RE } from "./youtube-manager";
+import { YouTubeManager } from "./youtube-manager";
 import { formatHMS, parseHMS } from "./time-utils";
 import { PluginSettings, DEFAULT_SETTINGS, PersistentAudioPlayerSettingTab } from "./settings";
 
@@ -160,8 +160,7 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
 
   initYouTubeManager(): void {
     if (this.youtubeManager) return;
-    const mgr = new YouTubeManager();
-    this.youtubeManager = mgr;
+    this.youtubeManager = new YouTubeManager();
 
     const scanForIframes = (): void => {
       if (!this.youtubeManager) return;
@@ -169,13 +168,7 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
       if (!activePath) return;
       const leaf = document.querySelector(".workspace-leaf.mod-active");
       if (!leaf) return;
-      leaf.querySelectorAll("iframe").forEach((iframe: HTMLIFrameElement) => {
-        const src = iframe.getAttribute("src") || "";
-        const match = src.match(YOUTUBE_RE);
-        if (match) {
-          mgr.trackIframe(iframe, match[1], activePath);
-        }
-      });
+      this.youtubeManager.scanElement(leaf, activePath);
     };
 
     this.app.workspace.onLayoutReady(() => scanForIframes());
@@ -183,6 +176,7 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
       if (this.ytScanTimeout !== null) clearTimeout(this.ytScanTimeout);
       this.ytScanTimeout = setTimeout(scanForIframes, 500);
     });
+    this.registerEvent(this.ytLeafChangeRef);
   }
 
   destroyYouTubeManager(): void {
@@ -358,16 +352,7 @@ export default class PersistentAudioPlayerPlugin extends Plugin {
     });
 
     // Detect YouTube iframes and track them for mini-player
-    if (this.youtubeManager) {
-      const iframes = el.querySelectorAll("iframe");
-      iframes.forEach((iframe: HTMLIFrameElement) => {
-        const src = iframe.getAttribute("src") || "";
-        const match = src.match(YOUTUBE_RE);
-        if (match) {
-          this.youtubeManager!.trackIframe(iframe, match[1], ctx.sourcePath);
-        }
-      });
-    }
+    this.youtubeManager?.scanElement(el, ctx.sourcePath);
   }
 
   private extractTitle(link: HTMLAnchorElement, href: string): string {

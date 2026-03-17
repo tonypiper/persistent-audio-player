@@ -86,8 +86,7 @@ export class YouTubeMiniPlayer {
   }
 
   destroy(): void {
-    if (this.boundMouseMove) document.removeEventListener("mousemove", this.boundMouseMove);
-    if (this.boundMouseUp) document.removeEventListener("mouseup", this.boundMouseUp);
+    this.detachDocListeners();
     this.containerEl.remove();
   }
 
@@ -129,20 +128,8 @@ export class YouTubeMiniPlayer {
     this.containerEl.style.top = `${top}px`;
   }
 
-  private setupDrag(header: HTMLElement, closeBtn: HTMLElement): void {
-    header.addEventListener("mousedown", (e: MouseEvent) => {
-      if (closeBtn.contains(e.target as Node)) return;
-      this.dragging = true;
-      this.dragStartX = e.clientX;
-      this.dragStartY = e.clientY;
-      const rect = this.containerEl.getBoundingClientRect();
-      this.dragStartLeft = rect.left;
-      this.dragStartTop = rect.top;
-      this.containerEl.style.left = `${rect.left}px`;
-      this.containerEl.style.right = "auto";
-      this.containerEl.addClass("dragging");
-      e.preventDefault();
-    });
+  private attachDocListeners(): void {
+    if (this.boundMouseMove) return;
 
     this.boundMouseMove = (e: MouseEvent): void => {
       if (this.dragging) {
@@ -157,18 +144,43 @@ export class YouTubeMiniPlayer {
     };
 
     this.boundMouseUp = (): void => {
-      if (this.dragging) {
-        this.dragging = false;
-        this.containerEl.removeClass("dragging");
-      }
-      if (this.resizing) {
-        this.resizing = false;
-        this.containerEl.removeClass("resizing");
-      }
+      this.dragging = false;
+      this.resizing = false;
+      this.containerEl.removeClass("dragging");
+      this.containerEl.removeClass("resizing");
+      this.detachDocListeners();
     };
 
     document.addEventListener("mousemove", this.boundMouseMove);
     document.addEventListener("mouseup", this.boundMouseUp);
+  }
+
+  private detachDocListeners(): void {
+    if (this.boundMouseMove) {
+      document.removeEventListener("mousemove", this.boundMouseMove);
+      this.boundMouseMove = null;
+    }
+    if (this.boundMouseUp) {
+      document.removeEventListener("mouseup", this.boundMouseUp);
+      this.boundMouseUp = null;
+    }
+  }
+
+  private setupDrag(header: HTMLElement, closeBtn: HTMLElement): void {
+    header.addEventListener("mousedown", (e: MouseEvent) => {
+      if (closeBtn.contains(e.target as Node)) return;
+      this.dragging = true;
+      this.dragStartX = e.clientX;
+      this.dragStartY = e.clientY;
+      const rect = this.containerEl.getBoundingClientRect();
+      this.dragStartLeft = rect.left;
+      this.dragStartTop = rect.top;
+      this.containerEl.style.left = `${rect.left}px`;
+      this.containerEl.style.right = "auto";
+      this.containerEl.addClass("dragging");
+      this.attachDocListeners();
+      e.preventDefault();
+    });
   }
 
   private setupResize(handle: HTMLElement): void {
@@ -177,6 +189,7 @@ export class YouTubeMiniPlayer {
       this.resizeStartX = e.clientX;
       this.resizeStartWidth = this.containerEl.getBoundingClientRect().width;
       this.containerEl.addClass("resizing");
+      this.attachDocListeners();
       e.preventDefault();
       e.stopPropagation();
     });

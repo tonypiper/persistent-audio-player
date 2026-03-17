@@ -24,6 +24,17 @@ export class YouTubeManager {
     this.miniPlayer = new YouTubeMiniPlayer();
   }
 
+  scanElement(container: Element, sourcePath: string): void {
+    this.dismissed = false;
+    container.querySelectorAll("iframe").forEach((iframe: HTMLIFrameElement) => {
+      const src = iframe.getAttribute("src") || "";
+      const match = src.match(YOUTUBE_RE);
+      if (match) {
+        this.trackIframe(iframe, match[1], sourcePath);
+      }
+    });
+  }
+
   trackIframe(iframe: HTMLIFrameElement, videoId: string, sourcePath: string): void {
     // Prune stale entries whose iframes are no longer in the DOM
     for (const [id, entry] of this.players.entries()) {
